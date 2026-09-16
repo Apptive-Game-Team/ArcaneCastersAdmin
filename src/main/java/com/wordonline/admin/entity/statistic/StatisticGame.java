@@ -43,5 +43,5 @@ public class StatisticGame {
     private Set<StatisticGameMagic> statisticGameMagics;
 
     @OneToMany(mappedBy = "statisticGame")
-    private Set<StatisticGameCard> statisticGameCards;
+    private Set<StatisticGameDeck> statisticGameDecks;
 }

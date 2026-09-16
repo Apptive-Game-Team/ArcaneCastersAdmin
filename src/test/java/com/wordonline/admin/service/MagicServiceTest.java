@@ -1,10 +1,6 @@
 package com.wordonline.admin.service;
 
-import com.wordonline.admin.dto.CardDto;
 import com.wordonline.admin.dto.MagicDto;
-import com.wordonline.admin.entity.magic.CardType;
-import com.wordonline.admin.repository.magic.CardRepository;
-import com.wordonline.admin.repository.magic.MagicCardRepository;
 import com.wordonline.admin.repository.magic.MagicRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,10 +20,6 @@ class MagicServiceTest {
     @Mock
     private MagicRepository magicRepository;
     @Mock
-    private CardRepository cardRepository;
-    @Mock
-    private MagicCardRepository magicCardRepository;
-    @Mock
     private SecondaryAdminDataService secondaryAdminDataService;
     private MagicService magicService;
 
@@ -35,21 +27,15 @@ class MagicServiceTest {
     void setUp() {
         magicService = new MagicService(
                 magicRepository,
-                cardRepository,
-                magicCardRepository,
                 Optional.of(secondaryAdminDataService)
         );
     }
 
     @Test
-    void getMagicComparisons_mergesMagicsAndCardsByName() {
+    void getMagicComparisons_mergesMagicsByName() {
         when(magicRepository.findAllByOrderByIdAsc()).thenReturn(List.of());
         when(secondaryAdminDataService.getMagics()).thenReturn(List.of(
-                new MagicDto(
-                        20L,
-                        "fireball",
-                        List.of(new CardDto(200L, "fire-card", CardType.Magic))
-                )
+                new MagicDto(20L, "fireball", "Fire", "DEFAULT")
         ));
 
         var comparisons = magicService.getMagicComparisons();
@@ -58,8 +44,9 @@ class MagicServiceTest {
         assertEquals("fireball", comparisons.getFirst().name());
         assertFalse(comparisons.getFirst().primaryPresent());
         assertTrue(comparisons.getFirst().secondaryPresent());
-        assertEquals("fire-card", comparisons.getFirst().cards().getFirst().name());
-        assertFalse(comparisons.getFirst().cards().getFirst().primaryPresent());
-        assertTrue(comparisons.getFirst().cards().getFirst().secondaryPresent());
+        assertEquals("Fire", comparisons.getFirst().secondaryElement());
+        assertEquals("DEFAULT", comparisons.getFirst().secondaryAccessType());
+        assertNull(comparisons.getFirst().primaryElement());
+        assertNull(comparisons.getFirst().primaryAccessType());
     }
 }

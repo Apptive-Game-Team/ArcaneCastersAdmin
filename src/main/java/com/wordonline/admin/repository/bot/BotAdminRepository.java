@@ -57,12 +57,12 @@ public class BotAdminRepository {
     private List<BotDeckCardDto> findDeckCards(long userId) {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery("""
-                SELECT c.id, c.name::text, dc.count
+                SELECT m.id, m.name::text, dc.count
                 FROM users u
                 JOIN deck_cards dc ON dc.deck_id = u.selected_deck_id
-                JOIN cards c ON c.id = dc.card_id
+                JOIN magics m ON m.id = dc.magic_id
                 WHERE u.id = :userId
-                ORDER BY c.id
+                ORDER BY m.id
                 """).setParameter("userId", userId).getResultList();
         return rows.stream().map(row -> new BotDeckCardDto(
                 ((Number) row[0]).longValue(), row[1].toString(), ((Number) row[2]).intValue()
@@ -133,18 +133,18 @@ public class BotAdminRepository {
         }
     }
 
-    public void replaceSelectedDeckCards(long userId, List<Long> cardIds, List<Integer> counts) {
+    public void replaceSelectedDeckCards(long userId, List<Long> magicIds, List<Integer> counts) {
         Number deckId = (Number) entityManager.createNativeQuery("""
                 SELECT d.id FROM users u JOIN decks d ON d.id=u.selected_deck_id AND d.user_id=u.id
                 WHERE u.id=:userId AND u.id < 0
                 """).setParameter("userId", userId).getSingleResult();
         entityManager.createNativeQuery("DELETE FROM deck_cards WHERE deck_id=:deckId")
                 .setParameter("deckId", deckId.longValue()).executeUpdate();
-        for (int i = 0; i < cardIds.size(); i++) {
+        for (int i = 0; i < magicIds.size(); i++) {
             entityManager.createNativeQuery("""
-                    INSERT INTO deck_cards(deck_id, card_id, count)
-                    SELECT :deckId, id, :count FROM cards WHERE id=:cardId
-                    """).setParameter("deckId", deckId.longValue()).setParameter("cardId", cardIds.get(i))
+                    INSERT INTO deck_cards(deck_id, magic_id, count)
+                    SELECT :deckId, id, :count FROM magics WHERE id=:magicId
+                    """).setParameter("deckId", deckId.longValue()).setParameter("magicId", magicIds.get(i))
                     .setParameter("count", counts.get(i)).executeUpdate();
         }
     }
@@ -167,11 +167,11 @@ public class BotAdminRepository {
                 .setParameter("deckId", deckId.longValue()).executeUpdate();
         for (BotDeckCardDto card : cards) {
             int inserted = entityManager.createNativeQuery("""
-                    INSERT INTO deck_cards(deck_id, card_id, count)
-                    SELECT :deckId, id, :count FROM cards WHERE name::text=:cardName
-                    """).setParameter("deckId", deckId.longValue()).setParameter("cardName", card.cardName())
+                    INSERT INTO deck_cards(deck_id, magic_id, count)
+                    SELECT :deckId, id, :count FROM magics WHERE name::text=:magicName
+                    """).setParameter("deckId", deckId.longValue()).setParameter("magicName", card.magicName())
                     .setParameter("count", card.count()).executeUpdate();
-            if (inserted != 1) throw new IllegalArgumentException("Card not found: " + card.cardName());
+            if (inserted != 1) throw new IllegalArgumentException("Magic not found: " + card.magicName());
         }
     }
 

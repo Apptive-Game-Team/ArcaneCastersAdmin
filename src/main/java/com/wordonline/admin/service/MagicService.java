@@ -11,16 +11,10 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.wordonline.admin.dto.CardDto;
 import com.wordonline.admin.dto.MagicDto;
 import com.wordonline.admin.dto.MagicComparisonDto;
-import com.wordonline.admin.dto.MagicCardComparisonDto;
 
-import com.wordonline.admin.entity.magic.Card;
 import com.wordonline.admin.entity.magic.Magic;
-import com.wordonline.admin.entity.magic.MagicCard;
-import com.wordonline.admin.repository.magic.CardRepository;
-import com.wordonline.admin.repository.magic.MagicCardRepository;
 import com.wordonline.admin.repository.magic.MagicRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -31,8 +25,6 @@ import lombok.RequiredArgsConstructor;
 public class MagicService {
 
     private final MagicRepository magicRepository;
-    private final CardRepository cardRepository;
-    private final MagicCardRepository magicCardRepository;
     private final Optional<SecondaryAdminDataService> secondaryAdminDataService;
 
     public boolean hasSecondaryDatabase() {
@@ -54,50 +46,6 @@ public class MagicService {
                 .stream()
                 .map(MagicDto::new)
                 .toList();
-    }
-
-    public void addCardToMagic(long magicId, long cardId) {
-        addCardToMagic(magicId, cardId, false);
-    }
-
-    public void addCardToMagic(long magicId, long cardId, boolean secondary) {
-        if (secondary) {
-            secondaryAdminDataService.orElseThrow().addCardToMagic(magicId, cardId);
-            return;
-        }
-
-        Magic magic = magicRepository.findById(magicId)
-                .orElseThrow(() -> new IllegalArgumentException("Magic Not Found"));
-
-        Card card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new IllegalArgumentException("Magic Not Found"));
-
-        MagicCard magicCard = new MagicCard(null, magic, card);
-
-        magicCardRepository.save(magicCard);
-        magic.addMagicCard(magicCard);
-    }
-
-    public void removeCardFromMagic(long magicId, long cardId) {
-        removeCardFromMagic(magicId, cardId, false);
-    }
-
-    public void removeCardFromMagic(long magicId, long cardId, boolean secondary) {
-        if (secondary) {
-            secondaryAdminDataService.orElseThrow().removeCardFromMagic(magicId, cardId);
-            return;
-        }
-
-        Magic magic = magicRepository.findById(magicId)
-                .orElseThrow(() -> new IllegalArgumentException("Magic Not Found"));
-
-        MagicCard magicCard = magic.removeOneMagicCard(cardId);
-
-        if (magicCard == null) {
-            return;
-        }
-
-        magicCardRepository.delete(magicCard);
     }
 
     public void removeMagic(long magicId) {
@@ -131,25 +79,40 @@ public class MagicService {
     }
 
     public void createMagic(String name, boolean secondary) {
+        createMagic(name, "None", "DEFAULT", secondary);
+    }
+
+    public void createMagic(String name, String element, String accessType, boolean secondary) {
         if (secondary) {
-            secondaryAdminDataService.orElseThrow().createMagic(name);
+            secondaryAdminDataService.orElseThrow().createMagic(name, element, accessType);
             return;
         }
 
         Magic magic = new Magic();
         magic.setName(name);
+        magic.setElement(element);
+        magic.setAccessType(accessType);
         magicRepository.save(magic);
     }
 
-    public void updateMagicName(String currentName, String newName, boolean secondary) {
+    public void updateMagicByName(
+            String currentName,
+            String newName,
+            String element,
+            String accessType,
+            boolean secondary
+    ) {
         if (secondary) {
-            secondaryAdminDataService.orElseThrow().updateMagicName(currentName, newName);
+            secondaryAdminDataService.orElseThrow()
+                    .updateMagic(currentName, newName, element, accessType);
             return;
         }
 
         Magic magic = magicRepository.findByName(currentName)
                 .orElseThrow(() -> new IllegalArgumentException("Magic not found: " + currentName));
         magic.setName(newName);
+        magic.setElement(element);
+        magic.setAccessType(accessType);
     }
 
     public void removeMagic(String name, boolean secondary) {
@@ -163,117 +126,45 @@ public class MagicService {
         magicRepository.delete(magic);
     }
 
-    public void addCardToMagic(String magicName, String cardName, boolean secondary) {
-        if (secondary) {
-            secondaryAdminDataService.orElseThrow().addCardToMagic(magicName, cardName);
-            return;
-        }
-
-        Magic magic = magicRepository.findByName(magicName)
-                .orElseThrow(() -> new IllegalArgumentException("Magic not found: " + magicName));
-        Card card = cardRepository.findByName(cardName)
-                .orElseThrow(() -> new IllegalArgumentException("Card not found: " + cardName));
-        MagicCard magicCard = new MagicCard(null, magic, card);
-        magicCardRepository.save(magicCard);
-        magic.addMagicCard(magicCard);
-    }
-
-    public void removeCardFromMagic(String magicName, String cardName, boolean secondary) {
-        if (secondary) {
-            secondaryAdminDataService.orElseThrow().removeCardFromMagic(magicName, cardName);
-            return;
-        }
-
-        Magic magic = magicRepository.findByName(magicName)
-                .orElseThrow(() -> new IllegalArgumentException("Magic not found: " + magicName));
-        Card card = cardRepository.findByName(cardName)
-                .orElseThrow(() -> new IllegalArgumentException("Card not found: " + cardName));
-        magicCardRepository.deleteByMagicIdAndCardId(magic.getId(), card.getId());
-    }
-
     @Transactional(readOnly = true)
     public List<MagicComparisonDto> getMagicComparisons() {
-        Map<String, List<String>> primaryCardsByMagic = getAllMagic(false).stream()
+        Map<String, MagicDto> primaryMagicsByName = getAllMagic(false).stream()
                 .collect(Collectors.toMap(
                         MagicDto::name,
-                        magic -> magic.cardDtos().stream()
-                                .map(CardDto::name)
-                                .sorted()
-                                .toList(),
+                        magic -> magic,
                         (current, replacement) -> {
                             throw new IllegalStateException("Duplicate magic name in primary database");
                         },
                         TreeMap::new
                 ));
-        Map<String, List<String>> secondaryCardsByMagic = secondaryAdminDataService
+        Map<String, MagicDto> secondaryMagicsByName = secondaryAdminDataService
                 .map(service -> service.getMagics().stream()
                         .collect(Collectors.toMap(
                                 MagicDto::name,
-                                magic -> magic.cardDtos().stream()
-                                        .map(CardDto::name)
-                                        .sorted()
-                                        .toList(),
+                                magic -> magic,
                                 (current, replacement) -> {
                                     throw new IllegalStateException("Duplicate magic name in secondary database");
                                 },
                                 TreeMap::new
                         )))
                 .orElseGet(TreeMap::new);
-        Set<String> names = new TreeSet<>(primaryCardsByMagic.keySet());
-        names.addAll(secondaryCardsByMagic.keySet());
+        Set<String> names = new TreeSet<>(primaryMagicsByName.keySet());
+        names.addAll(secondaryMagicsByName.keySet());
 
         return names.stream()
                 .map(name -> {
-                    Set<String> primaryCardNames = new TreeSet<>(
-                            primaryCardsByMagic.getOrDefault(name, List.of())
-                    );
-                    Set<String> secondaryCardNames = new TreeSet<>(
-                            secondaryCardsByMagic.getOrDefault(name, List.of())
-                    );
-                    Set<String> cardNames = new TreeSet<>(primaryCardNames);
-                    cardNames.addAll(secondaryCardNames);
+                    MagicDto primaryMagic = primaryMagicsByName.get(name);
+                    MagicDto secondaryMagic = secondaryMagicsByName.get(name);
                     return new MagicComparisonDto(
                             name,
-                            primaryCardsByMagic.containsKey(name),
-                            secondaryCardsByMagic.containsKey(name),
-                            cardNames.stream()
-                                    .filter(cardName ->
-                                            primaryCardNames.contains(cardName)
-                                                || secondaryCardNames.contains(cardName)
-                                    )
-                                    .map(cardName -> new MagicCardComparisonDto(
-                                            cardName,
-                                            primaryCardNames.contains(cardName),
-                                            secondaryCardNames.contains(cardName)
-                                    ))
-                                    .toList()
+                            primaryMagic != null,
+                            secondaryMagic != null,
+                            primaryMagic != null ? primaryMagic.element() : null,
+                            secondaryMagic != null ? secondaryMagic.element() : null,
+                            primaryMagic != null ? primaryMagic.accessType() : null,
+                            secondaryMagic != null ? secondaryMagic.accessType() : null
                     );
                 })
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<String> getCardNames(boolean secondary) {
-        return getAllCards(secondary).stream()
-                .map(CardDto::name)
-                .sorted()
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<CardDto> getAllCards() {
-        return getAllCards(false);
-    }
-
-    @Transactional(readOnly = true)
-    public List<CardDto> getAllCards(boolean secondary) {
-        if (secondary) {
-            return secondaryAdminDataService.orElseThrow().getCards();
-        }
-
-        return cardRepository.findAll(org.springframework.data.domain.Sort.by("id"))
-                .stream()
-                .map(CardDto::new)
                 .toList();
     }
 
@@ -285,6 +176,7 @@ public class MagicService {
         List<MagicDto> magics = secondaryAdminDataService.orElseThrow().getMagics();
         List<String> changedNames = new java.util.ArrayList<>();
         int created = 0;
+        int updated = 0;
         int unchanged = 0;
         Map<String, Magic> existingMagicsByName = magicRepository.findAllBy().stream()
                 .collect(Collectors.toMap(
@@ -300,26 +192,25 @@ public class MagicService {
             if (targetMagic == null) {
                 targetMagic = new Magic();
                 targetMagic.setName(magic.name());
-                targetMagic = magicRepository.save(targetMagic);
+                targetMagic.setElement(magic.element());
+                targetMagic.setAccessType(magic.accessType());
+                magicRepository.save(targetMagic);
                 created++;
+                changedNames.add(magic.name());
+            } else if (!java.util.Objects.equals(targetMagic.getElement(), magic.element())
+                    || !java.util.Objects.equals(targetMagic.getAccessType(), magic.accessType())) {
+                targetMagic.setElement(magic.element());
+                targetMagic.setAccessType(magic.accessType());
+                updated++;
                 changedNames.add(magic.name());
             } else {
                 unchanged++;
-            }
-
-            magicCardRepository.deleteAll(magicCardRepository.findByMagicId(targetMagic.getId()));
-            for (CardDto card : magic.cardDtos()) {
-                Card targetCard = cardRepository.findByName(card.name())
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Card not found in primary database: " + card.name()
-                        ));
-                magicCardRepository.save(new MagicCard(null, targetMagic, targetCard));
             }
         }
 
         return new SyncResult(
                 created,
-                0,
+                updated,
                 unchanged,
                 changedNames
         );

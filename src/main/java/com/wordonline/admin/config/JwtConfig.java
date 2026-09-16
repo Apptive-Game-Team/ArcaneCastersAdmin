@@ -1,29 +1,25 @@
 package com.wordonline.admin.config;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import com.wordonline.admin.repository.server.ServerRepository;
+import com.wordonline.admin.security.AccountJwksDecoder;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.KeyFactory;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
-
-@Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class JwtConfig {
 
-    @Value("${word-online.jwt.public-key}")
-    private RSAPublicKey publicKey;
+    private final ServerRepository serverRepository;
 
+    /**
+     * The ACCOUNT server's address lives in the {@code servers} table, which is not queryable
+     * while this bean is being constructed. {@link AccountJwksDecoder} defers resolving the JWKS
+     * URI to the first {@code decode} call, mirroring {@code AccountServerClient.init()}.
+     */
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withPublicKey(publicKey).build();
+        return new AccountJwksDecoder(serverRepository);
     }
 }

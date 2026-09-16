@@ -30,6 +30,13 @@ public class Server {
     private String domain;
     private Integer port;
 
+    /**
+     * Base URL for server-to-server calls on the private network, e.g. {@code http://account-server:8080}
+     * (no trailing slash). Written by the owning server itself. {@code null} means it was never
+     * reported; callers then fall back to {@link #getUrl()}.
+     */
+    private String internalBaseUrl;
+
     @Enumerated(EnumType.STRING)
     private ServerType type;
 
@@ -55,13 +62,23 @@ public class Server {
         return String.format("%s://%s:%d", protocol, domain, port);
     }
 
+    /**
+     * Base URL to use for server-to-server calls: {@link #internalBaseUrl} when this server
+     * reported one, otherwise the public {@link #getUrl()}. Chosen once here from whichever
+     * value is present; a caller whose internal address turns out to be unreachable is
+     * responsible for falling back to {@link #getUrl()} itself (see {@code AccountServerClient}).
+     */
+    public String getInterServerUrl() {
+        return internalBaseUrl != null ? internalBaseUrl : getUrl();
+    }
+
     public Server(Long id, String protocol, String domain, Integer port, ServerType type, ServerState state,
                   Integer sessionCount, Instant lastHeartbeatAt) {
-        this(id, protocol, domain, port, type, state, sessionCount, lastHeartbeatAt, null);
+        this(id, protocol, domain, port, null, type, state, sessionCount, lastHeartbeatAt, null);
     }
 
     public Server(Long id, String protocol, String domain, Integer port, ServerType type, ServerState state) {
-        this(id, protocol, domain, port, type, state, null, null);
+        this(id, protocol, domain, port, null, type, state, null, null, null);
     }
 
     public Server(String protocol, String domain, int port, ServerType serverType, ServerState state) {

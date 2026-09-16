@@ -10,7 +10,7 @@ This repository is a Spring Boot 3 admin server built with Gradle and Java 21. A
 - `docker build -t word-online-admin .`: build the container image from the multi-stage `Dockerfile`.
 - `./remote-deploy.sh`: build and deploy to the configured remote host. Requires `DEPLOY_USER` and `DEPLOY_SERVER`.
 
-Local configuration is loaded from `src/main/resources/application.yml` and optional `.env[.properties]`. Set `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PW`, `JWT_PUBLIC_KEY`, and `JWT_FILE_PATH` before running locally. Shared game database changes belong in `../database/migration`; do not add production SQL under this repository's runtime resources.
+Local configuration is loaded from `src/main/resources/application.yml` and optional `.env[.properties]`. Set `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PW`, and `JWT_FILE_PATH` before running locally. Token verification reads the ACCOUNT server's address from the `servers` table and fetches its JWKS from `/.well-known/jwks`; there is no local public-key configuration for this. Shared game database changes belong in `../database/migration`; do not add production SQL under this repository's runtime resources.
 
 ## Coding Style & Naming Conventions
 Use 4-space indentation and standard Java formatting. Class names use `PascalCase`; methods, fields, and variables use `camelCase`; package names stay lowercase. Keep controller classes suffixed with `Controller`, service classes with `Service`, repositories with `Repository`, and request/response payloads with `Dto` or `RequestDto`. Prefer constructor injection; this codebase uses Lombok annotations such as `@RequiredArgsConstructor`.

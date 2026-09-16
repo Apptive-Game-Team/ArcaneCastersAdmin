@@ -23,11 +23,6 @@ public class MagicController {
             Model model
     ) {
         model.addAttribute("magics", magicService.getMagicComparisons());
-        model.addAttribute("primaryCardNames", magicService.getCardNames(false));
-        model.addAttribute(
-                "secondaryCardNames",
-                magicService.hasSecondaryDatabase() ? magicService.getCardNames(true) : List.of()
-        );
         model.addAttribute("secondaryDatabaseEnabled", magicService.hasSecondaryDatabase());
         return "admin-magic";
     }
@@ -35,9 +30,11 @@ public class MagicController {
     @PostMapping("/admin/magic/by-name/create")
     public String createMagicByName(
             @RequestParam String name,
+            @RequestParam String element,
+            @RequestParam String accessType,
             @RequestParam String db
     ) {
-        magicService.createMagic(name, isSecondary(db));
+        magicService.createMagic(name, element, accessType, isSecondary(db));
         return redirect();
     }
 
@@ -45,9 +42,11 @@ public class MagicController {
     public String updateMagicByName(
             @RequestParam String currentName,
             @RequestParam String name,
+            @RequestParam String element,
+            @RequestParam String accessType,
             @RequestParam String db
     ) {
-        magicService.updateMagicName(currentName, name, isSecondary(db));
+        magicService.updateMagicByName(currentName, name, element, accessType, isSecondary(db));
         return redirect();
     }
 
@@ -60,26 +59,6 @@ public class MagicController {
         return redirect();
     }
 
-    @PostMapping("/admin/magic/by-name/add-card")
-    public String addCardToMagicByName(
-            @RequestParam String magicName,
-            @RequestParam String cardName,
-            @RequestParam String db
-    ) {
-        magicService.addCardToMagic(magicName, cardName, isSecondary(db));
-        return redirect();
-    }
-
-    @PostMapping("/admin/magic/by-name/remove-card")
-    public String removeCardFromMagicByName(
-            @RequestParam String magicName,
-            @RequestParam String cardName,
-            @RequestParam String db
-    ) {
-        magicService.removeCardFromMagic(magicName, cardName, isSecondary(db));
-        return redirect();
-    }
-
     @PostMapping("/admin/magic/by-name/bulk-delete")
     public String bulkDeleteByName(
             @RequestParam(required = false) List<String> magicNames,
@@ -88,20 +67,6 @@ public class MagicController {
         if (magicNames != null) {
             for (String magicName : magicNames) {
                 magicService.removeMagic(magicName, isSecondary(db));
-            }
-        }
-        return redirect();
-    }
-
-    @PostMapping("/admin/magic/by-name/bulk-add-card")
-    public String bulkAddCardByName(
-            @RequestParam(required = false) List<String> magicNames,
-            @RequestParam String cardName,
-            @RequestParam String db
-    ) {
-        if (magicNames != null) {
-            for (String magicName : magicNames) {
-                magicService.addCardToMagic(magicName, cardName, isSecondary(db));
             }
         }
         return redirect();
@@ -125,18 +90,6 @@ public class MagicController {
         return redirect(db);
     }
 
-    @PostMapping("/admin/magic/add-card")
-    public String addCardToMagic(@RequestParam long magicId, @RequestParam long cardId, @RequestParam(value = "db", defaultValue = "primary") String db) {
-        magicService.addCardToMagic(magicId, cardId, isSecondary(db));
-        return redirect(db);
-    }
-
-    @PostMapping("/admin/magic/remove-card")
-    public String removeCardFromMagic(@RequestParam long magicId, @RequestParam long cardId, @RequestParam(value = "db", defaultValue = "primary") String db) {
-        magicService.removeCardFromMagic(magicId, cardId, isSecondary(db));
-        return redirect(db);
-    }
-
     @PostMapping("/admin/magic/bulk-delete")
     public String bulkDelete(
             @RequestParam(required = false) List<Long> selectedMagicIds,
@@ -145,20 +98,6 @@ public class MagicController {
         if (selectedMagicIds != null) {
             for (Long magicId : selectedMagicIds) {
                 magicService.removeMagic(magicId, isSecondary(db));
-            }
-        }
-        return redirect(db);
-    }
-
-    @PostMapping("/admin/magic/bulk-add-card")
-    public String bulkAddCard(
-            @RequestParam(required = false) List<Long> selectedMagicIds,
-            @RequestParam("bulkCardId") Long cardId,
-            @RequestParam(value = "db", defaultValue = "primary") String db
-    ) {
-        if (selectedMagicIds != null && cardId != null) {
-            for (Long magicId : selectedMagicIds) {
-                magicService.addCardToMagic(magicId, cardId, isSecondary(db));
             }
         }
         return redirect(db);

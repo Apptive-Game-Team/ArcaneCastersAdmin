@@ -1,6 +1,5 @@
 package com.wordonline.admin.service;
 
-import com.wordonline.admin.dto.CardDto;
 import com.wordonline.admin.dto.MagicDto;
 import com.wordonline.admin.dto.adventure.AdventureDto;
 import com.wordonline.admin.dto.adventure.ScenarioDto;
@@ -35,8 +34,7 @@ public class SecondaryAdminDataService {
     public record ScenarioRow(Long id, Long stageId) {}
     public record QuestRow(Long id, String progressChecker, Integer requireValue, String rewardGiver) {}
     public record RewardParamRow(Long id, Long questId, String name, Integer value) {}
-    public record MagicRow(Long id, String name) {}
-    public record MagicCardRow(Long id, Long magicId, Long cardId) {}
+    public record MagicRow(Long id, String name, String element, String accessType) {}
 
     public List<AdventureDto> getAdventures() {
         Map<Long, List<ScenarioDto>> scenariosByStageId = getScenarioRows().stream()
@@ -79,40 +77,9 @@ public class SecondaryAdminDataService {
     }
 
     public List<MagicDto> getMagics() {
-        Map<Long, List<CardDto>> cardsByMagicId = jdbcTemplate.query(
-                """
-                select mc.magic_id, c.id, c.name, c.card_type
-                from magic_cards mc
-                join cards c on c.id = mc.card_id
-                order by mc.id
-                """,
-                (rs, rowNum) -> Map.entry(
-                        rs.getLong("magic_id"),
-                        new CardDto(
-                                rs.getLong("id"),
-                                rs.getString("name"),
-                                com.wordonline.admin.entity.magic.CardType.valueOf(rs.getString("card_type"))
-                        )
-                )
-        ).stream().collect(Collectors.groupingBy(
-                Map.Entry::getKey,
-                Collectors.mapping(Map.Entry::getValue, Collectors.toList())
-        ));
-
         return getMagicRows().stream()
-                .map(row -> new MagicDto(row.id(), row.name(), cardsByMagicId.getOrDefault(row.id(), List.of())))
+                .map(row -> new MagicDto(row.id(), row.name(), row.element(), row.accessType()))
                 .toList();
-    }
-
-    public List<CardDto> getCards() {
-        return jdbcTemplate.query(
-                "select id, name, card_type from cards order by id",
-                (rs, rowNum) -> new CardDto(
-                        rs.getLong("id"),
-                        rs.getString("name"),
-                        com.wordonline.admin.entity.magic.CardType.valueOf(rs.getString("card_type"))
-                )
-        );
     }
 
     public Long createAdventure(String name, String accessType) {
@@ -186,7 +153,16 @@ public class SecondaryAdminDataService {
     }
 
     public void createMagic(String name) {
-        jdbcTemplate.update("insert into magics (name) values (?)", name);
+        createMagic(name, "None", "DEFAULT");
+    }
+
+    public void createMagic(String name, String element, String accessType) {
+        jdbcTemplate.update(
+                "insert into magics (name, element, access_type) values (?, ?, ?)",
+                name,
+                element,
+                accessType
+        );
     }
 
     public void updateMagicName(Long id, String name) {
@@ -195,22 +171,6 @@ public class SecondaryAdminDataService {
 
     public void deleteMagic(Long id) {
         jdbcTemplate.update("delete from magics where id = ?", id);
-    }
-
-    public void addCardToMagic(Long magicId, Long cardId) {
-        jdbcTemplate.update("insert into magic_cards (magic_id, card_id) values (?, ?)", magicId, cardId);
-    }
-
-    public void removeCardFromMagic(Long magicId, Long cardId) {
-        List<Long> ids = jdbcTemplate.query(
-                "select id from magic_cards where magic_id = ? and card_id = ? order by id limit 1",
-                (rs, rowNum) -> rs.getLong("id"),
-                magicId,
-                cardId
-        );
-        if (!ids.isEmpty()) {
-            jdbcTemplate.update("delete from magic_cards where id = ?", ids.getFirst());
-        }
     }
 
     public void updateMagicName(String currentName, String newName) {
@@ -224,44 +184,23 @@ public class SecondaryAdminDataService {
         }
     }
 
+    public void updateMagic(String currentName, String newName, String element, String accessType) {
+        int updated = jdbcTemplate.update(
+                "update magics set name = ?, element = ?, access_type = ? where name = ?",
+                newName,
+                element,
+                accessType,
+                currentName
+        );
+        if (updated == 0) {
+            throw new IllegalArgumentException("Magic not found in secondary database: " + currentName);
+        }
+    }
+
     public void deleteMagic(String name) {
         int deleted = jdbcTemplate.update("delete from magics where name = ?", name);
         if (deleted == 0) {
             throw new IllegalArgumentException("Magic not found in secondary database: " + name);
-        }
-    }
-
-    public void addCardToMagic(String magicName, String cardName) {
-        jdbcTemplate.update(
-                """
-                insert into magic_cards (magic_id, card_id)
-                select m.id, c.id
-                from magics m
-                cross join cards c
-                where m.name = ? and c.name = ?
-                """,
-                magicName,
-                cardName
-        );
-    }
-
-    public void removeCardFromMagic(String magicName, String cardName) {
-        List<Long> ids = jdbcTemplate.query(
-                """
-                select mc.id
-                from magic_cards mc
-                join magics m on m.id = mc.magic_id
-                join cards c on c.id = mc.card_id
-                where m.name = ? and c.name = ?
-                order by mc.id
-                limit 1
-                """,
-                (rs, rowNum) -> rs.getLong("id"),
-                magicName,
-                cardName
-        );
-        if (!ids.isEmpty()) {
-            jdbcTemplate.update("delete from magic_cards where id = ?", ids.getFirst());
         }
     }
 
@@ -378,6 +317,7 @@ public class SecondaryAdminDataService {
 
     public SyncResult syncMagicsToSecondary(List<MagicDto> magics) {
         int created = 0;
+        int updated = 0;
         int unchanged = 0;
         List<String> changed = new ArrayList<>();
         Map<String, MagicRow> existingMagics = getMagicRows().stream()
@@ -391,41 +331,31 @@ public class SecondaryAdminDataService {
 
         for (MagicDto magic : magics) {
             MagicRow existing = existingMagics.get(magic.name());
-            Long targetMagicId;
             if (existing == null) {
-                targetMagicId = jdbcTemplate.queryForObject(
-                        "insert into magics (name) values (?) returning id",
-                        Long.class,
-                        magic.name()
+                jdbcTemplate.update(
+                        "insert into magics (name, element, access_type) values (?, ?, ?)",
+                        magic.name(),
+                        magic.element(),
+                        magic.accessType()
                 );
                 created++;
                 changed.add(magic.name());
-            } else {
-                targetMagicId = existing.id();
-                unchanged++;
-            }
-
-            jdbcTemplate.update("delete from magic_cards where magic_id = ?", targetMagicId);
-            for (CardDto card : magic.cardDtos()) {
-                int inserted = jdbcTemplate.update(
-                        """
-                        insert into magic_cards (magic_id, card_id)
-                        select ?, c.id
-                        from cards c
-                        where c.name = ?
-                        """,
-                        targetMagicId,
-                        card.name()
+            } else if (!Objects.equals(existing.element(), magic.element())
+                    || !Objects.equals(existing.accessType(), magic.accessType())) {
+                jdbcTemplate.update(
+                        "update magics set element = ?, access_type = ? where name = ?",
+                        magic.element(),
+                        magic.accessType(),
+                        magic.name()
                 );
-                if (inserted == 0) {
-                    throw new IllegalArgumentException(
-                            "Card not found in secondary database: " + card.name()
-                    );
-                }
+                updated++;
+                changed.add(magic.name());
+            } else {
+                unchanged++;
             }
         }
 
-        return new SyncResult(created, 0, unchanged, changed);
+        return new SyncResult(created, updated, unchanged, changed);
     }
 
     public List<AdventureRow> getAdventureRows() {
@@ -475,15 +405,13 @@ public class SecondaryAdminDataService {
 
     public List<MagicRow> getMagicRows() {
         return jdbcTemplate.query(
-                "select id, name from magics order by id",
-                (rs, rowNum) -> new MagicRow(rs.getLong("id"), rs.getString("name"))
-        );
-    }
-
-    public List<MagicCardRow> getMagicCardRows() {
-        return jdbcTemplate.query(
-                "select id, magic_id, card_id from magic_cards order by id",
-                (rs, rowNum) -> new MagicCardRow(rs.getLong("id"), rs.getLong("magic_id"), rs.getLong("card_id"))
+                "select id, name, element, access_type from magics order by id",
+                (rs, rowNum) -> new MagicRow(
+                        rs.getLong("id"),
+                        rs.getString("name"),
+                        rs.getString("element"),
+                        rs.getString("access_type")
+                )
         );
     }
 

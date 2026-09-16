@@ -64,29 +64,29 @@ public class BotAdminService {
 
     public void replaceDeck(long userId, BotDeckForm form) {
         requireBotId(userId);
-        if (!form.getCardNames().isEmpty()) {
-            validateDeckInputs(form.getCardNames(), form.getCounts());
+        if (!form.getMagicNames().isEmpty()) {
+            validateDeckInputs(form.getMagicNames(), form.getCounts());
             repository.updateSelectedDeckName(userId, requireText(form.getDeckName(), "Deck name"));
             List<BotDeckCardDto> cards = new ArrayList<>();
-            for (int i = 0; i < form.getCardNames().size(); i++) {
-                cards.add(new BotDeckCardDto(0, form.getCardNames().get(i), form.getCounts().get(i)));
+            for (int i = 0; i < form.getMagicNames().size(); i++) {
+                cards.add(new BotDeckCardDto(0, form.getMagicNames().get(i), form.getCounts().get(i)));
             }
             repository.replaceSelectedDeckCardsByName(userId, cards);
             return;
         }
-        validateDeckInputs(form.getCardIds(), form.getCounts());
-        repository.replaceSelectedDeckCards(userId, form.getCardIds(), form.getCounts());
+        validateDeckInputs(form.getMagicIds(), form.getCounts());
+        repository.replaceSelectedDeckCards(userId, form.getMagicIds(), form.getCounts());
     }
 
-    private void validateDeckInputs(List<?> cards, List<Integer> counts) {
-        if (cards.size() != counts.size()) {
-            throw new IllegalArgumentException("Every card requires a count");
+    private void validateDeckInputs(List<?> magics, List<Integer> counts) {
+        if (magics.size() != counts.size()) {
+            throw new IllegalArgumentException("Every magic requires a count");
         }
-        if (cards.stream().distinct().count() != cards.size()) {
-            throw new IllegalArgumentException("Duplicate cards are not allowed");
+        if (magics.stream().distinct().count() != magics.size()) {
+            throw new IllegalArgumentException("Duplicate magics are not allowed");
         }
         if (counts.stream().anyMatch(count -> count == null || count < 1)) {
-            throw new IllegalArgumentException("Card count must be positive");
+            throw new IllegalArgumentException("Magic count must be positive");
         }
     }
 

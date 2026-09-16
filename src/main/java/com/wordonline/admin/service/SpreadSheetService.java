@@ -4,9 +4,7 @@ import com.wordonline.admin.controller.SpreadSheetApiController;
 import com.wordonline.admin.dto.sheet.GameObjectComparisonDto;
 import com.wordonline.admin.dto.sheet.GameObjectDto;
 import com.wordonline.admin.dto.sheet.ParameterComparisonDto;
-import com.wordonline.admin.entity.magic.Card;
 import com.wordonline.admin.entity.magic.Magic;
-import com.wordonline.admin.entity.magic.MagicCard;
 import com.wordonline.admin.entity.parameter.GameObject;
 import com.wordonline.admin.entity.parameter.ParameterValue;
 import com.wordonline.admin.repository.magic.MagicRepository;
@@ -171,14 +169,14 @@ public class SpreadSheetService {
             Magic magic = magicRepository.findById(magicId)
                     .orElseThrow(() -> new IllegalArgumentException("Magic Not Found"));
 
-            int manaCost = magic.getMagicCards().stream()
-                    .map(MagicCard::getCard)
-                    .map(Card::getGameObject)
-                    .map(cardData -> cardData.getParameterValue("mana_cost")
-                            .map(ParameterValue::getValue)
-                            .orElseThrow(() -> new IllegalArgumentException("Mana Cost not Found")))
-                    .mapToInt(Double::intValue)
-                    .sum();
+            // The magic's own game object shares its name with the magic (magics.name == game_objects.name)
+            // and carries the mana_cost parameter directly; there is no longer a card recipe to sum.
+            GameObject magicGameObject = gameObjectRepository.findByName(magic.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Magic game object not found: " + magic.getName()));
+            int manaCost = magicGameObject.getParameterValue("mana_cost")
+                    .map(ParameterValue::getValue)
+                    .orElseThrow(() -> new IllegalArgumentException("Mana Cost not Found"))
+                    .intValue();
 
             return GameObjectDto.fromGameObject(gameObject, manaCost);
         } catch (IllegalArgumentException e) {

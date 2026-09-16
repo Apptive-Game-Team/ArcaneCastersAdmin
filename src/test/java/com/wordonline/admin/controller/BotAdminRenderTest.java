@@ -64,8 +64,8 @@ class BotAdminRenderTest {
     @WithMockUser(authorities = "WORDONLINE_ADMIN")
     void detailPageKeepsTheHospitalityFlagAndTheNegativeAggressionOnTheForm() throws Exception {
         when(botService.comparison(-5L)).thenReturn(new BotComparisonDto(-5L, hospitalityBot, null));
-        when(botService.primaryCards()).thenReturn(List.of());
-        when(botService.secondaryCards()).thenReturn(List.of());
+        when(botService.primaryMagics()).thenReturn(List.of());
+        when(botService.secondaryMagics()).thenReturn(List.of());
         when(botService.hasSecondary()).thenReturn(false);
 
         String html = render("/admin/bot/-5");

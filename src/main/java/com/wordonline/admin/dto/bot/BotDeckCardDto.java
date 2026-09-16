@@ -1,4 +1,4 @@
 package com.wordonline.admin.dto.bot;
 
-public record BotDeckCardDto(long cardId, String cardName, int count) {
+public record BotDeckCardDto(long magicId, String magicName, int count) {
 }

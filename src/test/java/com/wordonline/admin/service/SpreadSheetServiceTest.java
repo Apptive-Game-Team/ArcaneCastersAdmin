@@ -8,9 +8,7 @@ import com.wordonline.admin.dto.ParameterDto;
 import com.wordonline.admin.dto.sheet.GameObjectComparisonDto;
 import com.wordonline.admin.dto.sheet.ParameterComparisonDto;
 import com.wordonline.admin.controller.SpreadSheetApiController;
-import com.wordonline.admin.entity.magic.Card;
 import com.wordonline.admin.entity.magic.Magic;
-import com.wordonline.admin.entity.magic.MagicCard;
 import com.wordonline.admin.entity.parameter.GameObject;
 import com.wordonline.admin.entity.parameter.Parameter;
 import com.wordonline.admin.entity.parameter.ParameterValue;
@@ -100,18 +98,13 @@ class SpreadSheetServiceTest {
         Magic magic = new Magic();
         magic.setName("TestMagic");
 
-        Card card = mock(Card.class);
-        GameObject cardGameObject = new GameObject("CardObject");
+        GameObject magicGameObject = new GameObject("TestMagic");
         Parameter manaCostParam = new Parameter("mana_cost");
-        new ParameterValue(null, cardGameObject, manaCostParam);
-
-        when(card.getGameObject()).thenReturn(cardGameObject);
-
-        MagicCard magicCard = new MagicCard(1L, magic, card);
-        magic.addMagicCard(magicCard);
+        new ParameterValue(null, magicGameObject, manaCostParam);
 
         when(gameObjectRepository.findAll(any(Sort.class))).thenReturn(List.of(gameObject));
         when(magicRepository.findById(42L)).thenReturn(Optional.of(magic));
+        when(gameObjectRepository.findByName("TestMagic")).thenReturn(Optional.of(magicGameObject));
 
         // Act
         List<GameObjectDto> results = spreadSheetService.getGameObjects(null);
@@ -119,6 +112,32 @@ class SpreadSheetServiceTest {
         // Assert
         assertEquals(1, results.size());
         assertNull(results.get(0).manaCost());
+    }
+
+    @Test
+    void testGetGameObjects_readsManaCostFromMagicsOwnGameObject() {
+        // Arrange
+        GameObject gameObject = new GameObject("TestObject");
+        Parameter parameter = new Parameter("magic_id");
+        new ParameterValue(42.0, gameObject, parameter);
+
+        Magic magic = new Magic();
+        magic.setName("TestMagic");
+
+        GameObject magicGameObject = new GameObject("TestMagic");
+        Parameter manaCostParam = new Parameter("mana_cost");
+        new ParameterValue(5.0, magicGameObject, manaCostParam);
+
+        when(gameObjectRepository.findAll(any(Sort.class))).thenReturn(List.of(gameObject));
+        when(magicRepository.findById(42L)).thenReturn(Optional.of(magic));
+        when(gameObjectRepository.findByName("TestMagic")).thenReturn(Optional.of(magicGameObject));
+
+        // Act
+        List<GameObjectDto> results = spreadSheetService.getGameObjects(null);
+
+        // Assert
+        assertEquals(1, results.size());
+        assertEquals(5, results.get(0).manaCost());
     }
 
     @Test

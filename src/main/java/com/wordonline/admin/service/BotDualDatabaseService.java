@@ -1,12 +1,12 @@
 package com.wordonline.admin.service;
 
-import com.wordonline.admin.dto.CardDto;
+import com.wordonline.admin.dto.MagicDto;
 import com.wordonline.admin.dto.bot.BotAdminDto;
 import com.wordonline.admin.dto.bot.BotComparisonDto;
 import com.wordonline.admin.dto.bot.BotDeckForm;
 import com.wordonline.admin.dto.bot.BotForm;
 import com.wordonline.admin.dto.bot.BotSyncResult;
-import com.wordonline.admin.repository.magic.CardRepository;
+import com.wordonline.admin.repository.magic.MagicRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ public class BotDualDatabaseService {
 
     private final BotAdminService primary;
     private final ObjectProvider<SecondaryBotAdminService> secondaryProvider;
-    private final CardRepository cardRepository;
+    private final MagicRepository magicRepository;
 
     public boolean hasSecondary() {
         return secondaryProvider.getIfAvailable() != null;
@@ -53,13 +53,13 @@ public class BotDualDatabaseService {
         return new BotComparisonDto(userId, primaryBot, secondaryBot);
     }
 
-    public List<CardDto> primaryCards() {
-        return cardRepository.findAll().stream().map(CardDto::new).toList();
+    public List<MagicDto> primaryMagics() {
+        return magicRepository.findAllByOrderByIdAsc().stream().map(MagicDto::new).toList();
     }
 
-    public List<CardDto> secondaryCards() {
+    public List<MagicDto> secondaryMagics() {
         SecondaryBotAdminService secondary = secondaryProvider.getIfAvailable();
-        return secondary == null ? List.of() : secondary.getCards();
+        return secondary == null ? List.of() : secondary.getMagics();
     }
 
     public long create(BotForm form, Target target) {
@@ -96,10 +96,10 @@ public class BotDualDatabaseService {
         validateDeckForm(form);
         if (target != Target.SECONDARY) primary.replaceDeck(userId, form);
         if (target != Target.PRIMARY) applySecondary(target, "deck update", () -> {
-            if (!form.getCardNames().isEmpty()) {
-                secondary().replaceDeckByNames(userId, form.getDeckName(), form.getCardNames(), form.getCounts());
+            if (!form.getMagicNames().isEmpty()) {
+                secondary().replaceDeckByNames(userId, form.getDeckName(), form.getMagicNames(), form.getCounts());
             } else {
-                secondary().replaceDeck(userId, form.getDeckName(), form.getCardIds(), form.getCounts());
+                secondary().replaceDeck(userId, form.getDeckName(), form.getMagicIds(), form.getCounts());
             }
         });
     }
@@ -166,15 +166,15 @@ public class BotDualDatabaseService {
     }
 
     private void validateDeckForm(BotDeckForm form) {
-        List<?> cards = form.getCardNames().isEmpty() ? form.getCardIds() : form.getCardNames();
+        List<?> magics = form.getMagicNames().isEmpty() ? form.getMagicIds() : form.getMagicNames();
         if (form.getDeckName() == null || form.getDeckName().isBlank()) {
             throw new IllegalArgumentException("Deck name is required");
         }
-        if (cards.size() != form.getCounts().size() || cards.stream().distinct().count() != cards.size()) {
-            throw new IllegalArgumentException("Invalid deck card inputs");
+        if (magics.size() != form.getCounts().size() || magics.stream().distinct().count() != magics.size()) {
+            throw new IllegalArgumentException("Invalid deck magic inputs");
         }
         if (form.getCounts().stream().anyMatch(count -> count == null || count < 1)) {
-            throw new IllegalArgumentException("Card count must be positive");
+            throw new IllegalArgumentException("Magic count must be positive");
         }
     }
 }

@@ -11,6 +11,11 @@
 <div layout:fragment="content">
     <div class="container py-4">
         <h1>Magic Deploy / Dev Comparison</h1>
+        <p class="text-muted">
+            Mana cost and range are edited on the parameter screen at
+            <code>/admin/game-object/by-name/{name}</code>. The magic name equals the
+            game object name.
+        </p>
 
         <div class="mb-3">
             <button type="button" id="sync-magic-to-secondary" class="btn btn-outline-secondary"
@@ -20,10 +25,21 @@
         </div>
 
         <div class="card mb-4">
-            <div class="card-header"><h4>Create Magic</h4></div>
+            <div class="card-header"><h4>Create Magic Card</h4></div>
             <div class="card-body">
                 <form th:action="@{/admin/magic/by-name/create}" method="post" class="form-inline">
                     <input type="text" class="form-control" name="name" placeholder="Magic name" required>
+                    <select class="form-control ml-2" name="element">
+                        <option value="Fire">Fire</option>
+                        <option value="Water">Water</option>
+                        <option value="Lightning">Lightning</option>
+                        <option value="Rock">Rock</option>
+                        <option value="Nature">Nature</option>
+                        <option value="Wind">Wind</option>
+                        <option value="None" selected>None</option>
+                    </select>
+                    <input type="text" class="form-control ml-2" name="accessType" value="DEFAULT"
+                           placeholder="Access type" required>
                     <select class="form-control ml-2" name="db">
                         <option value="primary">Deploy</option>
                         <option value="secondary" th:disabled="${!secondaryDatabaseEnabled}">Dev</option>
@@ -41,10 +57,6 @@
                         <option value="primary">Deploy</option>
                         <option value="secondary" th:disabled="${!secondaryDatabaseEnabled}">Dev</option>
                     </select>
-                    <select id="bulk-card-name" class="form-control ml-2">
-                        <option value="">Select card</option>
-                    </select>
-                    <button type="button" id="bulk-add-card" class="btn btn-success ml-2">Add Card</button>
                     <button type="button" id="bulk-delete" class="btn btn-danger ml-2">Delete</button>
                 </div>
             </div>
@@ -53,7 +65,7 @@
         <div class="form-group">
             <label for="magic-search">Search</label>
             <input type="text" class="form-control" id="magic-search"
-                   placeholder="Search magic or card name">
+                   placeholder="Search magic card">
         </div>
 
         <div th:each="magic : ${magics}" class="card mb-4 magic-search-item">
@@ -68,92 +80,81 @@
                     <div class="col-md-6">
                         <h4>Deploy</h4>
                         <div th:if="${!magic.primaryPresent}" class="text-muted">N/A</div>
-                        <div th:if="${magic.primaryPresent}">
-                            <form th:action="@{/admin/magic/by-name/update}" method="post"
-                                  class="form-inline mb-3">
-                                <input type="hidden" name="db" value="primary">
-                                <input type="hidden" name="currentName" th:value="${magic.name}">
-                                <input type="text" class="form-control" name="name" th:value="${magic.name}">
-                                <button class="btn btn-info ml-2" type="submit">Update</button>
-                            </form>
-                            <form th:action="@{/admin/magic/by-name/delete}" method="post" class="mb-3">
-                                <input type="hidden" name="db" value="primary">
-                                <input type="hidden" name="name" th:value="${magic.name}">
-                                <button class="btn btn-danger" type="submit">Delete</button>
-                            </form>
-                            <form th:action="@{/admin/magic/by-name/add-card}" method="post"
-                                  class="form-inline mb-3">
-                                <input type="hidden" name="db" value="primary">
-                                <input type="hidden" name="magicName" th:value="${magic.name}">
-                                <select class="form-control" name="cardName">
-                                    <option th:each="cardName : ${primaryCardNames}"
-                                            th:value="${cardName}" th:text="${cardName}"></option>
-                                </select>
-                                <button class="btn btn-success ml-2" type="submit">Add Card</button>
-                            </form>
-                        </div>
+                        <form th:if="${magic.primaryPresent}"
+                              th:action="@{/admin/magic/by-name/update}" method="post"
+                              class="form-inline mb-3">
+                            <input type="hidden" name="db" value="primary">
+                            <input type="hidden" name="currentName" th:value="${magic.name}">
+                            <input type="text" class="form-control" name="name" th:value="${magic.name}">
+                            <select class="form-control ml-2" name="element">
+                                <option value="Fire" th:selected="${magic.primaryElement == 'Fire'}">Fire</option>
+                                <option value="Water" th:selected="${magic.primaryElement == 'Water'}">Water</option>
+                                <option value="Lightning" th:selected="${magic.primaryElement == 'Lightning'}">Lightning</option>
+                                <option value="Rock" th:selected="${magic.primaryElement == 'Rock'}">Rock</option>
+                                <option value="Nature" th:selected="${magic.primaryElement == 'Nature'}">Nature</option>
+                                <option value="Wind" th:selected="${magic.primaryElement == 'Wind'}">Wind</option>
+                                <option value="None" th:selected="${magic.primaryElement == 'None'}">None</option>
+                            </select>
+                            <input type="text" class="form-control ml-2" name="accessType"
+                                   th:value="${magic.primaryAccessType}">
+                            <button class="btn btn-info ml-2" type="submit">Update</button>
+                        </form>
+                        <form th:if="${magic.primaryPresent}"
+                              th:action="@{/admin/magic/by-name/delete}" method="post" class="mb-3">
+                            <input type="hidden" name="db" value="primary">
+                            <input type="hidden" name="name" th:value="${magic.name}">
+                            <button class="btn btn-danger" type="submit">Delete</button>
+                        </form>
                     </div>
                     <div class="col-md-6">
                         <h4>Dev</h4>
                         <div th:if="${!magic.secondaryPresent}" class="text-muted">N/A</div>
-                        <div th:if="${magic.secondaryPresent}">
-                            <form th:action="@{/admin/magic/by-name/update}" method="post"
-                                  class="form-inline mb-3">
-                                <input type="hidden" name="db" value="secondary">
-                                <input type="hidden" name="currentName" th:value="${magic.name}">
-                                <input type="text" class="form-control" name="name" th:value="${magic.name}">
-                                <button class="btn btn-info ml-2" type="submit">Update</button>
-                            </form>
-                            <form th:action="@{/admin/magic/by-name/delete}" method="post" class="mb-3">
-                                <input type="hidden" name="db" value="secondary">
-                                <input type="hidden" name="name" th:value="${magic.name}">
-                                <button class="btn btn-danger" type="submit">Delete</button>
-                            </form>
-                            <form th:action="@{/admin/magic/by-name/add-card}" method="post"
-                                  class="form-inline mb-3">
-                                <input type="hidden" name="db" value="secondary">
-                                <input type="hidden" name="magicName" th:value="${magic.name}">
-                                <select class="form-control" name="cardName">
-                                    <option th:each="cardName : ${secondaryCardNames}"
-                                            th:value="${cardName}" th:text="${cardName}"></option>
-                                </select>
-                                <button class="btn btn-success ml-2" type="submit">Add Card</button>
-                            </form>
-                        </div>
+                        <form th:if="${magic.secondaryPresent}"
+                              th:action="@{/admin/magic/by-name/update}" method="post"
+                              class="form-inline mb-3">
+                            <input type="hidden" name="db" value="secondary">
+                            <input type="hidden" name="currentName" th:value="${magic.name}">
+                            <input type="text" class="form-control" name="name" th:value="${magic.name}">
+                            <select class="form-control ml-2" name="element">
+                                <option value="Fire" th:selected="${magic.secondaryElement == 'Fire'}">Fire</option>
+                                <option value="Water" th:selected="${magic.secondaryElement == 'Water'}">Water</option>
+                                <option value="Lightning" th:selected="${magic.secondaryElement == 'Lightning'}">Lightning</option>
+                                <option value="Rock" th:selected="${magic.secondaryElement == 'Rock'}">Rock</option>
+                                <option value="Nature" th:selected="${magic.secondaryElement == 'Nature'}">Nature</option>
+                                <option value="Wind" th:selected="${magic.secondaryElement == 'Wind'}">Wind</option>
+                                <option value="None" th:selected="${magic.secondaryElement == 'None'}">None</option>
+                            </select>
+                            <input type="text" class="form-control ml-2" name="accessType"
+                                   th:value="${magic.secondaryAccessType}">
+                            <button class="btn btn-info ml-2" type="submit">Update</button>
+                        </form>
+                        <form th:if="${magic.secondaryPresent}"
+                              th:action="@{/admin/magic/by-name/delete}" method="post" class="mb-3">
+                            <input type="hidden" name="db" value="secondary">
+                            <input type="hidden" name="name" th:value="${magic.name}">
+                            <button class="btn btn-danger" type="submit">Delete</button>
+                        </form>
                     </div>
                 </div>
 
                 <table class="table table-sm table-striped mt-3">
                     <thead>
                     <tr>
-                        <th>Card</th>
-                        <th>Deploy</th>
-                        <th>Dev</th>
+                        <th></th>
+                        <th>Element</th>
+                        <th>Access Type</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="card : ${magic.cards}">
-                        <td th:text="${card.name}"></td>
-                        <td>
-                            <span th:if="${!card.primaryPresent}" class="text-muted">N/A</span>
-                            <form th:if="${card.primaryPresent}"
-                                  th:action="@{/admin/magic/by-name/remove-card}" method="post">
-                                <input type="hidden" name="db" value="primary">
-                                <input type="hidden" name="magicName" th:value="${magic.name}">
-                                <input type="hidden" name="cardName" th:value="${card.name}">
-                                <button class="btn btn-sm btn-warning" type="submit">Remove</button>
-                            </form>
-                        </td>
-                        <td>
-                            <span th:if="${!card.secondaryPresent}" class="text-muted">N/A</span>
-                            <form th:if="${card.secondaryPresent}"
-                                  th:action="@{/admin/magic/by-name/remove-card}" method="post">
-                                <input type="hidden" name="db" value="secondary">
-                                <input type="hidden" name="magicName" th:value="${magic.name}">
-                                <input type="hidden" name="cardName" th:value="${card.name}">
-                                <button class="btn btn-sm btn-warning" type="submit">Remove</button>
-                            </form>
-                        </td>
+                    <tr>
+                        <td>Deploy</td>
+                        <td th:text="${magic.primaryPresent} ? ${magic.primaryElement} : 'N/A'"></td>
+                        <td th:text="${magic.primaryPresent} ? ${magic.primaryAccessType} : 'N/A'"></td>
+                    </tr>
+                    <tr>
+                        <td>Dev</td>
+                        <td th:text="${magic.secondaryPresent} ? ${magic.secondaryElement} : 'N/A'"></td>
+                        <td th:text="${magic.secondaryPresent} ? ${magic.secondaryAccessType} : 'N/A'"></td>
                     </tr>
                     </tbody>
                 </table>
@@ -162,20 +163,6 @@
     </div>
 
     <script th:inline="javascript">
-        const primaryCardNames = /*[[${primaryCardNames}]]*/ [];
-        const secondaryCardNames = /*[[${secondaryCardNames}]]*/ [];
-
-        function updateBulkCards() {
-            const db = document.getElementById('bulk-db').value;
-            const cardNames = db === 'secondary' ? secondaryCardNames : primaryCardNames;
-            const select = document.getElementById('bulk-card-name');
-            select.replaceChildren(new Option('Select card', ''));
-            cardNames.forEach(cardName => select.add(new Option(cardName, cardName)));
-        }
-
-        document.getElementById('bulk-db').addEventListener('change', updateBulkCards);
-        updateBulkCards();
-
         document.getElementById('magic-search').addEventListener('input', function(event) {
             const query = event.target.value.trim().toLowerCase();
             document.querySelectorAll('.magic-search-item').forEach(item => {
@@ -217,14 +204,6 @@
 
         document.getElementById('bulk-delete').addEventListener('click', function() {
             submitBulk('/admin/magic/by-name/bulk-delete', {});
-        });
-        document.getElementById('bulk-add-card').addEventListener('click', function() {
-            const cardName = document.getElementById('bulk-card-name').value;
-            if (!cardName) {
-                alert('Select a card.');
-                return;
-            }
-            submitBulk('/admin/magic/by-name/bulk-add-card', {cardName: cardName});
         });
 
         async function sync(url, message) {
