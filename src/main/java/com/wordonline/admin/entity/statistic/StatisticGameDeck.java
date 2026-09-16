@@ -6,14 +6,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-import com.wordonline.admin.entity.magic.Card;
+import com.wordonline.admin.entity.magic.Magic;
 
 import lombok.Getter;
 
 @Entity
-@Table(name = "statistic_game_cards")
+@Table(name = "statistic_game_decks")
 @Getter
-public class StatisticGameCard {
+public class StatisticGameDeck {
 
     @Id
     private Long id;
@@ -25,8 +25,8 @@ public class StatisticGameCard {
     private Long userId;
 
     @ManyToOne
-    @JoinColumn(name = "card_id")
-    private Card card;
+    @JoinColumn(name = "magic_id")
+    private Magic magic;
 
     private Integer count;
 

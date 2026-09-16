@@ -57,7 +57,7 @@ class BotAdminServiceTest {
     void rejectsMismatchedDeckCardInputs() {
         BotAdminService service = new BotAdminService(repository);
         BotDeckForm form = new BotDeckForm();
-        form.setCardIds(List.of(1L, 2L));
+        form.setMagicIds(List.of(1L, 2L));
         form.setCounts(List.of(1));
 
         assertThrows(IllegalArgumentException.class, () -> service.replaceDeck(-1L, form));

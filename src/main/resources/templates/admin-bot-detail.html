@@ -27,10 +27,10 @@
                 <form method="post" th:action="@{/admin/bot/{id}/deck(id=${bot.userId})}">
                     <select class="form-select" name="db"><option value="primary">Deploy</option><option value="both" th:disabled="${!secondaryDatabaseEnabled}">Deploy + Dev</option></select>
                     <input class="form-control mt-1" name="deckName" th:value="${data.selectedDeckName}" required>
-                    <table class="table table-sm"><tr th:each="card : ${primaryCards}"><td><input type="checkbox" name="cardNames" th:value="${card.name}" onchange="this.closest('tr').querySelector('[name=counts]').disabled=!this.checked"></td><td th:text="${card.name}"></td><td><input class="form-control" name="counts" type="number" min="1" value="1" disabled></td></tr></table>
+                    <table class="table table-sm"><tr th:each="magic : ${primaryMagics}"><td><input type="checkbox" name="magicNames" th:value="${magic.name}" onchange="this.closest('tr').querySelector('[name=counts]').disabled=!this.checked"></td><td th:text="${magic.name}"></td><td><input class="form-control" name="counts" type="number" min="1" value="1" disabled></td></tr></table>
                     <button class="btn btn-primary">Replace deck</button>
                 </form>
-                <ul><li th:each="card : ${data.cards}" th:text="|${card.cardName} × ${card.count}|"></li></ul>
+                <ul><li th:each="card : ${data.cards}" th:text="|${card.magicName} × ${card.count}|"></li></ul>
             </div>
         </section>
         <section class="col-lg-6" th:with="data=${bot.secondary}">
@@ -53,8 +53,8 @@
                 <form class="d-inline" method="post" th:action="@{/admin/bot/{id}/delete(id=${bot.userId},db='secondary')}" onsubmit="return confirm('Dev bot을 영구 삭제할까요?')"><button class="btn btn-danger mt-2">Delete Dev</button></form>
                 <h3 class="mt-4" th:text="|Deck: ${data.selectedDeckName}|"></h3>
                 <form method="post" th:action="@{/admin/bot/{id}/deck(id=${bot.userId})}"><select class="form-select" name="db"><option value="secondary">Dev</option><option value="both">Deploy + Dev</option></select><input class="form-control mt-1" name="deckName" th:value="${data.selectedDeckName}" required>
-                    <table class="table table-sm"><tr th:each="card : ${secondaryCards}"><td><input type="checkbox" name="cardNames" th:value="${card.name}" onchange="this.closest('tr').querySelector('[name=counts]').disabled=!this.checked"></td><td th:text="${card.name}"></td><td><input class="form-control" name="counts" type="number" min="1" value="1" disabled></td></tr></table><button class="btn btn-primary">Replace deck</button></form>
-                <ul><li th:each="card : ${data.cards}" th:text="|${card.cardName} × ${card.count}|"></li></ul>
+                    <table class="table table-sm"><tr th:each="magic : ${secondaryMagics}"><td><input type="checkbox" name="magicNames" th:value="${magic.name}" onchange="this.closest('tr').querySelector('[name=counts]').disabled=!this.checked"></td><td th:text="${magic.name}"></td><td><input class="form-control" name="counts" type="number" min="1" value="1" disabled></td></tr></table><button class="btn btn-primary">Replace deck</button></form>
+                <ul><li th:each="card : ${data.cards}" th:text="|${card.magicName} × ${card.count}|"></li></ul>
             </div>
         </section>
     </div>

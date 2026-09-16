@@ -72,9 +72,9 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="card-tab" data-toggle="tab" data-target="#card"
-                        type="button" role="tab" aria-controls="card" aria-selected="false">
-                    Card Statistics
+                <button class="nav-link" id="deck-tab" data-toggle="tab" data-target="#deck"
+                        type="button" role="tab" aria-controls="deck" aria-selected="false">
+                    Deck Statistics
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -93,7 +93,7 @@
                 <div class="card mt-3">
                     <div class="card-body">
                         <h4>Summary</h4>
-                        <p>Select a tab above to view detailed statistics for players, cards, or magic.</p>
+                        <p>Select a tab above to view detailed statistics for players, decks, or magic.</p>
                     </div>
                 </div>
             </div>
@@ -121,8 +121,8 @@
                             <h4 id="selectedPlayerTitle">Player Statistics</h4>
                             <div class="row mt-4">
                                 <div class="col-md-6">
-                                    <h5>Card Usage</h5>
-                                    <canvas id="selectedPlayerCardChart"></canvas>
+                                    <h5>Deck Usage</h5>
+                                    <canvas id="selectedPlayerDeckChart"></canvas>
                                 </div>
                                 <div class="col-md-6">
                                     <h5>Magic Usage</h5>
@@ -137,31 +137,31 @@
                 </div>
             </div>
 
-            <!-- Card Statistics Tab -->
-            <div class="tab-pane fade" id="card" role="tabpanel" aria-labelledby="card-tab">
+            <!-- Deck Statistics Tab -->
+            <div class="tab-pane fade" id="deck" role="tabpanel" aria-labelledby="deck-tab">
                 <div class="card mt-3">
                     <div class="card-header">
-                        <h4>Card Statistics</h4>
+                        <h4>Deck Statistics</h4>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <h5>Total Plays</h5>
-                                <canvas id="cardTotalPlaysChart"></canvas>
+                                <canvas id="deckTotalPlaysChart"></canvas>
                             </div>
                             <div class="col-md-6">
                                 <h5>Wins</h5>
-                                <canvas id="cardWinsChart"></canvas>
+                                <canvas id="deckWinsChart"></canvas>
                             </div>
                         </div>
                         <div class="row mt-4">
                             <div class="col-md-6">
                                 <h5>Win Rate</h5>
-                                <canvas id="cardWinRateChart"></canvas>
+                                <canvas id="deckWinRateChart"></canvas>
                             </div>
                             <div class="col-md-6">
                                 <h5>Usage Ratio</h5>
-                                <canvas id="cardUsageRatioChart"></canvas>
+                                <canvas id="deckUsageRatioChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -204,14 +204,14 @@
 
     <script th:inline="javascript">
         /*<![CDATA[*/
-        const cardWinCounts = /*[[${cardWinCounts}]]*/ {};
+        const deckWinCounts = /*[[${deckWinCounts}]]*/ {};
         const magicWinCounts = /*[[${magicWinCounts}]]*/ {};
-        const cardGameCounts = /*[[${cardGameCounts}]]*/ {};
+        const deckGameCounts = /*[[${deckGameCounts}]]*/ {};
         const magicGameCounts = /*[[${magicGameCounts}]]*/ {};
-        const cardUseCounts = /*[[${cardUseCounts}]]*/ {};
+        const deckUseCounts = /*[[${deckUseCounts}]]*/ {};
         const magicUseCounts = /*[[${magicUseCounts}]]*/ {};
         const playerWinCounts = /*[[${playerWinCounts}]]*/ {};
-        const playerCardUsage = /*[[${playerCardUsage}]]*/ {};
+        const playerDeckUsage = /*[[${playerDeckUsage}]]*/ {};
         const playerMagicUsage = /*[[${playerMagicUsage}]]*/ {};
 
         // Reusable chart colors
@@ -256,7 +256,7 @@
 
         // Store chart instances
         let playerWinCountsChartInstance = null;
-        let selectedPlayerCardChartInstance = null;
+        let selectedPlayerDeckChartInstance = null;
         let selectedPlayerMagicChartInstance = null;
 
         // Initialize player selector
@@ -291,21 +291,21 @@
                 document.getElementById('selectedPlayerTitle').textContent = `Player ${selectedPlayerId} Statistics`;
                 document.getElementById('selectedPlayerWins').textContent = playerWinCounts[selectedPlayerId] || 0;
                 
-                // Render card usage chart
-                const cardUsage = playerCardUsage[selectedPlayerId] || {};
-                const cardData = createChartData(cardUsage);
-                
-                if (selectedPlayerCardChartInstance) {
-                    selectedPlayerCardChartInstance.destroy();
+                // Render deck usage chart
+                const deckUsage = playerDeckUsage[selectedPlayerId] || {};
+                const deckData = createChartData(deckUsage);
+
+                if (selectedPlayerDeckChartInstance) {
+                    selectedPlayerDeckChartInstance.destroy();
                 }
-                
-                if (hasData(cardUsage)) {
-                    selectedPlayerCardChartInstance = new Chart(document.getElementById('selectedPlayerCardChart'), {
+
+                if (hasData(deckUsage)) {
+                    selectedPlayerDeckChartInstance = new Chart(document.getElementById('selectedPlayerDeckChart'), {
                         type: 'pie',
                         data: {
-                            labels: cardData.labels,
+                            labels: deckData.labels,
                             datasets: [{
-                                data: cardData.values,
+                                data: deckData.values,
                                 backgroundColor: chartBackgroundColors
                             }]
                         },
@@ -375,21 +375,21 @@
                 }
             });
             
-            // Card Charts (lazy load on tab activation)
-            let cardChartsInitialized = false;
-            const cardTabEl = document.getElementById('card-tab');
-            cardTabEl.addEventListener('shown.bs.tab', function() {
-            if (!cardChartsInitialized) {
-                cardChartsInitialized = true;
-                
-                const cardTotalPlaysData = createChartData(cardGameCounts);
-                new Chart(document.getElementById('cardTotalPlaysChart'), {
+            // Deck Charts (lazy load on tab activation)
+            let deckChartsInitialized = false;
+            const deckTabEl = document.getElementById('deck-tab');
+            deckTabEl.addEventListener('shown.bs.tab', function() {
+            if (!deckChartsInitialized) {
+                deckChartsInitialized = true;
+
+                const deckTotalPlaysData = createChartData(deckGameCounts);
+                new Chart(document.getElementById('deckTotalPlaysChart'), {
                     type: 'bar',
                     data: {
-                        labels: cardTotalPlaysData.labels,
+                        labels: deckTotalPlaysData.labels,
                         datasets: [{
                             label: 'Total Plays',
-                            data: cardTotalPlaysData.values,
+                            data: deckTotalPlaysData.values,
                             backgroundColor: 'rgba(54, 162, 235, 0.2)',
                             borderColor: 'rgba(54, 162, 235, 1)',
                             borderWidth: 1
@@ -397,14 +397,14 @@
                     }
                 });
 
-                const cardWinsData = createChartData(cardWinCounts);
-                new Chart(document.getElementById('cardWinsChart'), {
+                const deckWinsData = createChartData(deckWinCounts);
+                new Chart(document.getElementById('deckWinsChart'), {
                     type: 'bar',
                     data: {
-                        labels: cardWinsData.labels,
+                        labels: deckWinsData.labels,
                         datasets: [{
                             label: 'Wins',
-                            data: cardWinsData.values,
+                            data: deckWinsData.values,
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             borderColor: 'rgba(75, 192, 192, 1)',
                             borderWidth: 1
@@ -412,20 +412,20 @@
                     }
                 });
 
-                const cardWinRateLabels = cardTotalPlaysData.labels;
-                const cardWinRateData = cardWinRateLabels.map(label => {
-                    const totalPlays = cardGameCounts[label] || 0;
-                    const wins = cardWinCounts[label] || 0;
+                const deckWinRateLabels = deckTotalPlaysData.labels;
+                const deckWinRateData = deckWinRateLabels.map(label => {
+                    const totalPlays = deckGameCounts[label] || 0;
+                    const wins = deckWinCounts[label] || 0;
                     return totalPlays > 0 ? (wins / totalPlays) * 100 : 0;
                 });
 
-                new Chart(document.getElementById('cardWinRateChart'), {
+                new Chart(document.getElementById('deckWinRateChart'), {
                     type: 'bar',
                     data: {
-                        labels: cardWinRateLabels,
+                        labels: deckWinRateLabels,
                         datasets: [{
                             label: 'Win Rate (%)',
-                            data: cardWinRateData,
+                            data: deckWinRateData,
                             backgroundColor: 'rgba(153, 102, 255, 0.2)',
                             borderColor: 'rgba(153, 102, 255, 1)',
                             borderWidth: 1
@@ -433,14 +433,14 @@
                     }
                 });
 
-                const cardUsageData = createChartData(cardUseCounts);
-                new Chart(document.getElementById('cardUsageRatioChart'), {
+                const deckUsageData = createChartData(deckUseCounts);
+                new Chart(document.getElementById('deckUsageRatioChart'), {
                     type: 'pie',
                     data: {
-                        labels: cardUsageData.labels,
+                        labels: deckUsageData.labels,
                         datasets: [{
                             label: 'Usage Ratio',
-                            data: cardUsageData.values,
+                            data: deckUsageData.values,
                             backgroundColor: pieChartBackgroundColors,
                             borderColor: pieChartBorderColors,
                             borderWidth: 1

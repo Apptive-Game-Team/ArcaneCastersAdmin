@@ -1,6 +1,5 @@
 package com.wordonline.admin.service;
 
-import com.wordonline.admin.dto.CardDto;
 import com.wordonline.admin.dto.MagicDto;
 import com.wordonline.admin.dto.adventure.AdventureDto;
 import com.wordonline.admin.dto.adventure.ScenarioDto;
@@ -81,17 +80,6 @@ public class SecondaryAdminDataService {
         return getMagicRows().stream()
                 .map(row -> new MagicDto(row.id(), row.name(), row.element(), row.accessType()))
                 .toList();
-    }
-
-    public List<CardDto> getCards() {
-        return jdbcTemplate.query(
-                "select id, name, card_type from cards order by id",
-                (rs, rowNum) -> new CardDto(
-                        rs.getLong("id"),
-                        rs.getString("name"),
-                        com.wordonline.admin.entity.magic.CardType.valueOf(rs.getString("card_type"))
-                )
-        );
     }
 
     public Long createAdventure(String name, String accessType) {

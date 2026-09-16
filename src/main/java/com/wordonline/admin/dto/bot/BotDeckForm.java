@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 public class BotDeckForm {
     private String deckName;
-    private List<Long> cardIds = new ArrayList<>();
-    private List<String> cardNames = new ArrayList<>();
+    private List<Long> magicIds = new ArrayList<>();
+    private List<String> magicNames = new ArrayList<>();
     private List<Integer> counts = new ArrayList<>();
 }
