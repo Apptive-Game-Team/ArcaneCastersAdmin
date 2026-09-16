@@ -1,10 +1,9 @@
 package com.wordonline.admin.service;
 
-import com.wordonline.admin.dto.CardDto;
+import com.wordonline.admin.dto.MagicDto;
 import com.wordonline.admin.dto.bot.BotAdminDto;
 import com.wordonline.admin.dto.bot.BotDeckCardDto;
 import com.wordonline.admin.dto.bot.BotForm;
-import com.wordonline.admin.entity.magic.CardType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -50,9 +49,9 @@ public class SecondaryBotAdminService {
     }
 
     @Transactional(readOnly = true, transactionManager = "secondaryTransactionManager")
-    public List<CardDto> getCards() {
-        return jdbcTemplate.query("select id, name::text, card_type::text from cards order by id", (rs, rowNum) ->
-                new CardDto(rs.getLong(1), rs.getString(2), CardType.valueOf(rs.getString(3))));
+    public List<MagicDto> getMagics() {
+        return jdbcTemplate.query("select id, name::text, element, access_type from magics order by id", (rs, rowNum) ->
+                new MagicDto(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4)));
     }
 
     public long allocateUserId() {
@@ -97,29 +96,29 @@ public class SecondaryBotAdminService {
                 enabled, userId) != 1) throw new IllegalArgumentException("Dev bot not found: " + userId);
     }
 
-    public void replaceDeck(long userId, String deckName, List<Long> cardIds, List<Integer> counts) {
+    public void replaceDeck(long userId, String deckName, List<Long> magicIds, List<Integer> counts) {
         Long deckId = selectedDeckId(userId);
         jdbcTemplate.update("UPDATE decks SET name=? WHERE id=? AND user_id=?", deckName, deckId, userId);
         jdbcTemplate.update("DELETE FROM deck_cards WHERE deck_id=?", deckId);
-        for (int i = 0; i < cardIds.size(); i++) {
+        for (int i = 0; i < magicIds.size(); i++) {
             int inserted = jdbcTemplate.update("""
-                    INSERT INTO deck_cards(deck_id, card_id, count)
-                    SELECT ?, id, ? FROM cards WHERE id=?
-                    """, deckId, counts.get(i), cardIds.get(i));
-            if (inserted != 1) throw new IllegalArgumentException("Dev card not found: " + cardIds.get(i));
+                    INSERT INTO deck_cards(deck_id, magic_id, count)
+                    SELECT ?, id, ? FROM magics WHERE id=?
+                    """, deckId, counts.get(i), magicIds.get(i));
+            if (inserted != 1) throw new IllegalArgumentException("Dev magic not found: " + magicIds.get(i));
         }
     }
 
-    public void replaceDeckByNames(long userId, String deckName, List<String> cardNames, List<Integer> counts) {
+    public void replaceDeckByNames(long userId, String deckName, List<String> magicNames, List<Integer> counts) {
         Long deckId = selectedDeckId(userId);
         jdbcTemplate.update("UPDATE decks SET name=? WHERE id=? AND user_id=?", deckName, deckId, userId);
         jdbcTemplate.update("DELETE FROM deck_cards WHERE deck_id=?", deckId);
-        for (int i = 0; i < cardNames.size(); i++) {
+        for (int i = 0; i < magicNames.size(); i++) {
             int inserted = jdbcTemplate.update("""
-                    INSERT INTO deck_cards(deck_id, card_id, count)
-                    SELECT ?, id, ? FROM cards WHERE name::text=?
-                    """, deckId, counts.get(i), cardNames.get(i));
-            if (inserted != 1) throw new IllegalArgumentException("Dev card not found: " + cardNames.get(i));
+                    INSERT INTO deck_cards(deck_id, magic_id, count)
+                    SELECT ?, id, ? FROM magics WHERE name::text=?
+                    """, deckId, counts.get(i), magicNames.get(i));
+            if (inserted != 1) throw new IllegalArgumentException("Dev magic not found: " + magicNames.get(i));
         }
     }
 
@@ -150,18 +149,18 @@ public class SecondaryBotAdminService {
         jdbcTemplate.update("DELETE FROM deck_cards WHERE deck_id=?", deckId);
         for (BotDeckCardDto card : cards) {
             int inserted = jdbcTemplate.update("""
-                    INSERT INTO deck_cards(deck_id, card_id, count)
-                    SELECT ?, id, ? FROM cards WHERE name::text=?
-                    """, deckId, card.count(), card.cardName());
-            if (inserted != 1) throw new IllegalArgumentException("Dev card not found: " + card.cardName());
+                    INSERT INTO deck_cards(deck_id, magic_id, count)
+                    SELECT ?, id, ? FROM magics WHERE name::text=?
+                    """, deckId, card.count(), card.magicName());
+            if (inserted != 1) throw new IllegalArgumentException("Dev magic not found: " + card.magicName());
         }
     }
 
     private List<BotDeckCardDto> findDeckCards(long userId) {
         return jdbcTemplate.query("""
-                SELECT c.id, c.name::text, dc.count FROM users u
+                SELECT m.id, m.name::text, dc.count FROM users u
                 JOIN deck_cards dc ON dc.deck_id=u.selected_deck_id
-                JOIN cards c ON c.id=dc.card_id WHERE u.id=? ORDER BY c.id
+                JOIN magics m ON m.id=dc.magic_id WHERE u.id=? ORDER BY m.id
                 """, (rs, rowNum) -> new BotDeckCardDto(rs.getLong(1), rs.getString(2), rs.getInt(3)), userId);
     }
 

@@ -1,6 +1,5 @@
 package com.wordonline.admin.controller;
 
-import com.wordonline.admin.entity.magic.Card;
 import com.wordonline.admin.entity.magic.Magic;
 import com.wordonline.admin.entity.statistic.GameType;
 import com.wordonline.admin.service.StatisticService;
@@ -29,9 +28,9 @@ public class StatisticController {
             @RequestParam(required = false) String gameType,
             @RequestParam(required = false) Integer days,
             Model model) {
-        
+
         GameType type = parseGameType(gameType);
-        
+
         // Default to 7 days if not specified, with validation
         int daysFilter = (days != null && days > 0) ? days : 7;
         // Cap at 365 days to prevent performance issues
@@ -39,24 +38,24 @@ public class StatisticController {
             daysFilter = 365;
         }
         LocalDateTime fromDate = LocalDateTime.now().minusDays(daysFilter);
-        
+
         String gameTypeForUrl = (gameType != null && !"ALL".equalsIgnoreCase(gameType)) ? gameType : null;
-        
+
         model.addAttribute("selectedGameType", gameType != null ? gameType : "ALL");
         model.addAttribute("gameTypeForUrl", gameTypeForUrl);
         model.addAttribute("selectedDays", daysFilter);
-        model.addAttribute("cardWinCounts", toCardNameMap(statisticService.calculateCardWinCounts(type, fromDate)));
-        model.addAttribute("magicWinCounts", toMagicNameMap(statisticService.calculateMagicWinCounts(type, fromDate)));
-        model.addAttribute("cardGameCounts", toCardNameMap(statisticService.calculateCardGameCounts(type, fromDate)));
-        model.addAttribute("magicGameCounts", toMagicNameMap(statisticService.calculateMagicGameCounts(type, fromDate)));
-        model.addAttribute("cardUseCounts", toCardNameMap(statisticService.calculateCardUseCounts(type, fromDate)));
-        model.addAttribute("magicUseCounts", toMagicNameMap(statisticService.calculateMagicUseCounts(type, fromDate)));
-        
+        model.addAttribute("deckWinCounts", toNameMap(statisticService.calculateDeckWinCounts(type, fromDate)));
+        model.addAttribute("magicWinCounts", toNameMap(statisticService.calculateMagicWinCounts(type, fromDate)));
+        model.addAttribute("deckGameCounts", toNameMap(statisticService.calculateDeckGameCounts(type, fromDate)));
+        model.addAttribute("magicGameCounts", toNameMap(statisticService.calculateMagicGameCounts(type, fromDate)));
+        model.addAttribute("deckUseCounts", toNameMap(statisticService.calculateDeckUseCounts(type, fromDate)));
+        model.addAttribute("magicUseCounts", toNameMap(statisticService.calculateMagicUseCounts(type, fromDate)));
+
         // Per-player statistics
         model.addAttribute("playerWinCounts", statisticService.calculatePlayerWinCounts(type, fromDate));
-        model.addAttribute("playerCardUsage", convertPlayerCardUsage(statisticService.calculatePlayerCardUsage(type, fromDate)));
-        model.addAttribute("playerMagicUsage", convertPlayerMagicUsage(statisticService.calculatePlayerMagicUsage(type, fromDate)));
-        
+        model.addAttribute("playerDeckUsage", convertPlayerUsage(statisticService.calculatePlayerDeckUsage(type, fromDate)));
+        model.addAttribute("playerMagicUsage", convertPlayerUsage(statisticService.calculatePlayerMagicUsage(type, fromDate)));
+
         return "admin-statistics";
     }
 
@@ -71,30 +70,16 @@ public class StatisticController {
         }
     }
 
-    private Map<String, Integer> toCardNameMap(Map<Card, Integer> map) {
+    // Deck win/game/use counts and magic cast win/game/use counts both key by Magic,
+    // so both the "brought a deck containing this magic" track and the "cast this magic"
+    // track share this conversion to a name-keyed map for the template.
+    private Map<String, Integer> toNameMap(Map<Magic, Integer> map) {
         return map.entrySet().stream()
                 .collect(Collectors.toMap(entry -> entry.getKey().getName(), Map.Entry::getValue));
     }
 
-    private Map<String, Integer> toMagicNameMap(Map<Magic, Integer> map) {
-        return map.entrySet().stream()
-                .collect(Collectors.toMap(entry -> entry.getKey().getName(), Map.Entry::getValue));
-    }
-    
-    private Map<Long, Map<String, Integer>> convertPlayerCardUsage(Map<Long, Map<Card, Integer>> playerCardUsage) {
-        return playerCardUsage.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().entrySet().stream()
-                                .collect(Collectors.toMap(
-                                        cardEntry -> cardEntry.getKey().getName(),
-                                        Map.Entry::getValue
-                                ))
-                ));
-    }
-    
-    private Map<Long, Map<String, Integer>> convertPlayerMagicUsage(Map<Long, Map<Magic, Integer>> playerMagicUsage) {
-        return playerMagicUsage.entrySet().stream()
+    private Map<Long, Map<String, Integer>> convertPlayerUsage(Map<Long, Map<Magic, Integer>> playerUsage) {
+        return playerUsage.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().entrySet().stream()

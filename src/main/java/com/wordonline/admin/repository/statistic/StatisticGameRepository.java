@@ -14,32 +14,32 @@ public interface StatisticGameRepository extends JpaRepository<StatisticGame, Lo
     @EntityGraph(attributePaths = {
             "statisticGameMagics",
             "statisticGameMagics.magic",
-            "statisticGameCards",
-            "statisticGameCards.card",
+            "statisticGameDecks",
+            "statisticGameDecks.magic",
     })
     List<StatisticGame> findAll();
-    
+
     @EntityGraph(attributePaths = {
             "statisticGameMagics",
             "statisticGameMagics.magic",
-            "statisticGameCards",
-            "statisticGameCards.card",
+            "statisticGameDecks",
+            "statisticGameDecks.magic",
     })
     List<StatisticGame> findByGameType(GameType gameType);
-    
+
     @EntityGraph(attributePaths = {
             "statisticGameMagics",
             "statisticGameMagics.magic",
-            "statisticGameCards",
-            "statisticGameCards.card",
+            "statisticGameDecks",
+            "statisticGameDecks.magic",
     })
     List<StatisticGame> findByCreatedAtAfter(LocalDateTime date);
-    
+
     @EntityGraph(attributePaths = {
             "statisticGameMagics",
             "statisticGameMagics.magic",
-            "statisticGameCards",
-            "statisticGameCards.card",
+            "statisticGameDecks",
+            "statisticGameDecks.magic",
     })
     List<StatisticGame> findByGameTypeAndCreatedAtAfter(GameType gameType, LocalDateTime date);
 }

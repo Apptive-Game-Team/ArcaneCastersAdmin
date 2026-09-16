@@ -2,7 +2,7 @@ package com.wordonline.admin.service;
 
 import com.wordonline.admin.dto.bot.BotAdminDto;
 import com.wordonline.admin.dto.bot.BotForm;
-import com.wordonline.admin.repository.magic.CardRepository;
+import com.wordonline.admin.repository.magic.MagicRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -23,7 +23,7 @@ class BotDualDatabaseServiceTest {
     @Mock BotAdminService primary;
     @Mock SecondaryBotAdminService secondary;
     @Mock ObjectProvider<SecondaryBotAdminService> secondaryProvider;
-    @Mock CardRepository cardRepository;
+    @Mock MagicRepository magicRepository;
 
     @Test
     void comparesBotsByUserIdAndKeepsMissingSide() {
@@ -87,7 +87,7 @@ class BotDualDatabaseServiceTest {
     }
 
     private BotDualDatabaseService service() {
-        return new BotDualDatabaseService(primary, secondaryProvider, cardRepository);
+        return new BotDualDatabaseService(primary, secondaryProvider, magicRepository);
     }
 
     private BotAdminDto bot(long id, String name) {

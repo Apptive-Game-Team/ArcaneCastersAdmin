@@ -35,8 +35,8 @@ public class BotAdminController {
     @GetMapping("/{userId}")
     public String detail(@PathVariable long userId, Model model) {
         model.addAttribute("bot", botService.comparison(userId));
-        model.addAttribute("primaryCards", botService.primaryCards());
-        model.addAttribute("secondaryCards", botService.secondaryCards());
+        model.addAttribute("primaryMagics", botService.primaryMagics());
+        model.addAttribute("secondaryMagics", botService.secondaryMagics());
         model.addAttribute("secondaryDatabaseEnabled", botService.hasSecondary());
         model.addAttribute("botForm", new BotForm());
         model.addAttribute("deckForm", new BotDeckForm());
