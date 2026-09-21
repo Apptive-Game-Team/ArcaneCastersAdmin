@@ -421,7 +421,7 @@ public class SecondaryAdminDataService {
             INSERT INTO user_magics(user_id, magic_id)
             SELECT u.id, m.id
             FROM users u, magics m
-            WHERE m.access_type = 'DEFAULT' AND m.player_castable = true AND
+            WHERE m.access_type = 'DEFAULT' AND m.purpose = 'PLAYER' AND
                 NOT EXISTS(
                     SELECT 1
                     FROM user_magics um
