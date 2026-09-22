@@ -11,6 +11,7 @@ public record BotAdminDto(
         double counterAggression,
         boolean enabled,
         boolean hospitality,
+        String temperament,
         short mmr,
         String status,
         Long selectedDeckId,

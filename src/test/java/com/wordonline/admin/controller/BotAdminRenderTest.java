@@ -40,7 +40,7 @@ class BotAdminRenderTest {
     private JwtDecoder jwtDecoder;
 
     private final BotAdminDto hospitalityBot = new BotAdminDto(-5L, "Warm Welcome", "HOSPITALITY",
-            1200, 30, -1.0, true, true, (short) 600, "Online", 9L, "Warm Welcome", List.of());
+            1200, 30, -1.0, true, true, "STOIC", (short) 600, "Online", 9L, "Warm Welcome", List.of());
 
     @Test
     @WithMockUser(authorities = "WORDONLINE_ADMIN")
@@ -56,6 +56,9 @@ class BotAdminRenderTest {
         assertThat(html).contains("min=\"-1\" max=\"1\"");
         // 접대 봇은 enabled이므로 목록에서 일반 봇과 구분되는 표시가 따로 있어야 한다.
         assertThat(html).contains(">Hospitality<");
+        // temperament는 emote 선택/빈도만 정한다는 문구와 함께 목록에도 값이 보여야 한다.
+        assertThat(html).contains("Temperament: STOIC");
+        assertThat(html).contains("실력과는 무관하다");
         // 이 페이지의 동기화 스크립트가 JS 템플릿 리터럴을 쓰므로 "${"는 정상적으로 남는다.
         assertThat(html).doesNotContain("th:text");
     }
@@ -77,6 +80,9 @@ class BotAdminRenderTest {
         assertThat(html).contains("name=\"_hospitality\"");
         assertThat(html).contains("name=\"counterAggression\" type=\"number\" min=\"-1\" max=\"1\"");
         assertThat(html).contains("value=\"-1.0\"");
+        // 현재 temperament가 선택된 상태로 남아야 저장 한 번에 다른 temperament로 덮이지 않는다.
+        assertThat(html).contains("name=\"temperament\"");
+        assertThat(html).contains("value=\"STOIC\" selected=\"selected\"");
         assertThat(html).doesNotContain("${", "th:text");
     }
 

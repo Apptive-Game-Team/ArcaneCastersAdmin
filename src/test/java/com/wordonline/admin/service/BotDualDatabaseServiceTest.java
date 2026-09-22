@@ -76,7 +76,7 @@ class BotDualDatabaseServiceTest {
     @Test
     void syncToPrimaryPassesTheHospitalityBotThroughUnchanged() {
         BotAdminDto hospitalityBot = new BotAdminDto(-5L, "Warm Welcome", "HOSPITALITY", 1200, 30, -1.0,
-                true, true, (short) 600, "Online", 9L, "Warm Welcome", List.of());
+                true, true, "STOIC", (short) 600, "Online", 9L, "Warm Welcome", List.of());
         when(secondaryProvider.getIfAvailable()).thenReturn(secondary);
         when(secondary.findAll()).thenReturn(List.of(hospitalityBot));
 
@@ -91,7 +91,7 @@ class BotDualDatabaseServiceTest {
     }
 
     private BotAdminDto bot(long id, String name) {
-        return new BotAdminDto(id, name, "BEGINNER", 250, 8, 0.25, true, false,
+        return new BotAdminDto(id, name, "BEGINNER", 250, 8, 0.25, true, false, "WARM",
                 (short) 1000, "Online", 1L, "Deck", List.of());
     }
 }

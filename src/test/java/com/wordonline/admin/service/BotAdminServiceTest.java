@@ -105,7 +105,7 @@ class BotAdminServiceTest {
     void upsertCarriesHospitalityIntoTheDeployUpdate() {
         BotAdminService service = new BotAdminService(repository);
         BotAdminDto source = new BotAdminDto(-5L, "Warm Welcome", "HOSPITALITY", 1200, 30, -1.0,
-                true, true, (short) 600, "Online", 9L, "Warm Welcome", List.of());
+                true, true, "STOIC", (short) 600, "Online", 9L, "Warm Welcome", List.of());
         when(repository.findByUserId(-5L)).thenReturn(Optional.of(source));
 
         service.upsert(source);
@@ -115,6 +115,29 @@ class BotAdminServiceTest {
         assertTrue(form.getValue().isHospitality());
         assertEquals("HOSPITALITY", form.getValue().getTier());
         assertEquals(-1.0, form.getValue().getCounterAggression());
+        assertEquals("STOIC", form.getValue().getTemperament());
+    }
+
+    @Test
+    void defaultsTemperamentToWarmWhenNotChosen() {
+        BotAdminService service = new BotAdminService(repository);
+        BotForm form = validForm();
+        form.setTemperament("");
+        when(repository.allocateUserId()).thenReturn(-7L);
+        when(repository.createDeck(-7L, "Bot Deck")).thenReturn(42L);
+
+        service.create(form);
+
+        assertEquals("WARM", form.getTemperament());
+    }
+
+    @Test
+    void rejectsAnUnsupportedTemperament() {
+        BotAdminService service = new BotAdminService(repository);
+        BotForm form = validForm();
+        form.setTemperament("GRUMPY");
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(form));
     }
 
     private BotForm validForm() {
