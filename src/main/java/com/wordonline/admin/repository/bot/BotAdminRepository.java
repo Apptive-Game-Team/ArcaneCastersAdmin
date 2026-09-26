@@ -33,7 +33,7 @@ public class BotAdminRepository {
         var query = entityManager.createNativeQuery("""
                 SELECT bp.user_id, bp.name, bp.tier::text, bp.thinking_time_ms,
                        bp.reaction_interval_frames, bp.counter_aggression, bp.enabled,
-                       bp.hospitality, u.mmr, u.status, u.selected_deck_id, d.name
+                       bp.hospitality, bp.temperament::text, u.mmr, u.status, u.selected_deck_id, d.name
                 FROM bot_personas bp
                 JOIN users u ON u.id = bp.user_id
                 LEFT JOIN decks d ON d.id = u.selected_deck_id
@@ -48,8 +48,8 @@ public class BotAdminRepository {
             return new BotAdminDto(
                     id, (String) row[1], (String) row[2], ((Number) row[3]).intValue(),
                     ((Number) row[4]).intValue(), ((Number) row[5]).doubleValue(), (Boolean) row[6],
-                    (Boolean) row[7], ((Number) row[8]).shortValue(), row[9].toString(),
-                    row[10] == null ? null : ((Number) row[10]).longValue(), (String) row[11], findDeckCards(id)
+                    (Boolean) row[7], (String) row[8], ((Number) row[9]).shortValue(), row[10].toString(),
+                    row[11] == null ? null : ((Number) row[11]).longValue(), (String) row[12], findDeckCards(id)
             );
         }).toList();
     }
@@ -96,13 +96,15 @@ public class BotAdminRepository {
     public void createPersona(long userId, BotForm form) {
         entityManager.createNativeQuery("""
                 INSERT INTO bot_personas(user_id, name, tier, thinking_time_ms,
-                    reaction_interval_frames, counter_aggression, enabled, hospitality)
-                VALUES (:userId, :name, CAST(:tier AS bot_tier), :thinking, :reaction, :aggression, :enabled, :hospitality)
+                    reaction_interval_frames, counter_aggression, enabled, hospitality, temperament)
+                VALUES (:userId, :name, CAST(:tier AS bot_tier), :thinking, :reaction, :aggression, :enabled, :hospitality,
+                    CAST(:temperament AS bot_temperament))
                 """).setParameter("userId", userId).setParameter("name", form.getName())
                 .setParameter("tier", form.getTier()).setParameter("thinking", form.getThinkingTimeMs())
                 .setParameter("reaction", form.getReactionIntervalFrames())
                 .setParameter("aggression", form.getCounterAggression()).setParameter("enabled", form.isEnabled())
                 .setParameter("hospitality", form.isHospitality())
+                .setParameter("temperament", form.getTemperament())
                 .executeUpdate();
     }
 
@@ -111,6 +113,7 @@ public class BotAdminRepository {
                 UPDATE bot_personas SET name=:name, tier=CAST(:tier AS bot_tier),
                     thinking_time_ms=:thinking, reaction_interval_frames=:reaction,
                     counter_aggression=:aggression, enabled=:enabled, hospitality=:hospitality,
+                    temperament=CAST(:temperament AS bot_temperament),
                     updated_at=CURRENT_TIMESTAMP
                 WHERE user_id=:userId
                 """).setParameter("userId", userId).setParameter("name", form.getName())
@@ -118,6 +121,7 @@ public class BotAdminRepository {
                 .setParameter("reaction", form.getReactionIntervalFrames())
                 .setParameter("aggression", form.getCounterAggression()).setParameter("enabled", form.isEnabled())
                 .setParameter("hospitality", form.isHospitality())
+                .setParameter("temperament", form.getTemperament())
                 .executeUpdate();
         int userUpdated = entityManager.createNativeQuery("""
                 UPDATE users SET mmr=:mmr, status=CAST(:status AS user_status) WHERE id=:userId AND id < 0

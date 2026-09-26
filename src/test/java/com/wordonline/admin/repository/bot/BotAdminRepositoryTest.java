@@ -45,7 +45,7 @@ class BotAdminRepositoryTest {
         when(entityManager.createNativeQuery(anyString())).thenAnswer(invocation ->
                 invocation.getArgument(0, String.class).contains("bot_personas") ? personaQuery : deckQuery);
         when(personaQuery.getResultList()).thenReturn(Collections.singletonList(new Object[]{
-                -5L, "Warm Welcome", "HOSPITALITY", 1200, 30, -1.0, true, true,
+                -5L, "Warm Welcome", "HOSPITALITY", 1200, 30, -1.0, true, true, "STOIC",
                 (short) 600, "Online", 7L, "Warm Welcome"
         }));
         when(deckQuery.setParameter(anyString(), any())).thenReturn(deckQuery);
@@ -58,6 +58,7 @@ class BotAdminRepositoryTest {
         assertTrue(bot.enabled());
         assertEquals("HOSPITALITY", bot.tier());
         assertEquals(-1.0, bot.counterAggression());
+        assertEquals("STOIC", bot.temperament());
         assertEquals((short) 600, bot.mmr());
         assertEquals("Online", bot.status());
         assertEquals(7L, bot.selectedDeckId());
@@ -81,6 +82,11 @@ class BotAdminRepositoryTest {
         assertTrue(statements.getAllValues().stream()
                 .anyMatch(sql -> sql.contains("UPDATE bot_personas") && sql.contains("hospitality=:hospitality")));
         verify(query, org.mockito.Mockito.times(2)).setParameter(eq("hospitality"), eq(true));
+        assertTrue(statements.getAllValues().stream()
+                .anyMatch(sql -> sql.contains("INSERT INTO bot_personas") && sql.contains("temperament")));
+        assertTrue(statements.getAllValues().stream()
+                .anyMatch(sql -> sql.contains("UPDATE bot_personas") && sql.contains("temperament=CAST(:temperament AS bot_temperament)")));
+        verify(query, org.mockito.Mockito.times(2)).setParameter(eq("temperament"), eq("STOIC"));
     }
 
     private BotForm hospitalityForm() {
@@ -92,6 +98,7 @@ class BotAdminRepositoryTest {
         form.setCounterAggression(-1.0);
         form.setEnabled(true);
         form.setHospitality(true);
+        form.setTemperament("STOIC");
         form.setMmr((short) 600);
         form.setStatus("Online");
         form.setDeckName("Warm Welcome");

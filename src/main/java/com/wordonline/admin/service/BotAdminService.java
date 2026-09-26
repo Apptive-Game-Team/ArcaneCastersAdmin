@@ -120,6 +120,7 @@ public class BotAdminService {
         form.setCounterAggression(source.counterAggression());
         form.setEnabled(source.enabled());
         form.setHospitality(source.hospitality());
+        form.setTemperament(source.temperament());
         form.setMmr(source.mmr());
         form.setStatus(source.status());
         form.setDeckName(source.selectedDeckName() == null ? "Bot Deck" : source.selectedDeckName());
@@ -130,6 +131,13 @@ public class BotAdminService {
         form.setName(requireText(form.getName(), "Name"));
         if (!List.of("INTRO", "BEGINNER", "INTERMEDIATE", "ADVANCED", "ELITE", "HOSPITALITY").contains(form.getTier())) {
             throw new IllegalArgumentException("Unsupported bot tier");
+        }
+        // temperament는 emote 선택/빈도만 고른다. 고르지 않으면 WARM으로 둔다.
+        if (form.getTemperament() == null || form.getTemperament().isBlank()) {
+            form.setTemperament("WARM");
+        }
+        if (!List.of("WARM", "SMUG", "TIMID", "STOIC").contains(form.getTemperament())) {
+            throw new IllegalArgumentException("Unsupported bot temperament");
         }
         if (form.getThinkingTimeMs() < 0 || form.getReactionIntervalFrames() < 1) {
             throw new IllegalArgumentException("Invalid bot timing");
