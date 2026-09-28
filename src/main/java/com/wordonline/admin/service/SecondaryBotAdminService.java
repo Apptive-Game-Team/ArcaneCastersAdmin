@@ -28,7 +28,7 @@ public class SecondaryBotAdminService {
         return jdbcTemplate.query("""
                 SELECT bp.user_id, bp.name, bp.tier::text, bp.thinking_time_ms,
                        bp.reaction_interval_frames, bp.counter_aggression, bp.enabled,
-                       bp.hospitality, u.mmr, u.status, u.selected_deck_id, d.name AS deck_name
+                       bp.hospitality, bp.temperament::text, u.mmr, u.status, u.selected_deck_id, d.name AS deck_name
                 FROM bot_personas bp
                 JOIN users u ON u.id=bp.user_id
                 LEFT JOIN decks d ON d.id=u.selected_deck_id
@@ -37,7 +37,7 @@ public class SecondaryBotAdminService {
                 rs.getLong("user_id"), rs.getString("name"), rs.getString("tier"),
                 rs.getInt("thinking_time_ms"), rs.getInt("reaction_interval_frames"),
                 rs.getDouble("counter_aggression"), rs.getBoolean("enabled"),
-                rs.getBoolean("hospitality"), rs.getShort("mmr"),
+                rs.getBoolean("hospitality"), rs.getString("temperament"), rs.getShort("mmr"),
                 rs.getString("status"), rs.getObject("selected_deck_id", Long.class),
                 rs.getString("deck_name"), findDeckCards(rs.getLong("user_id"))
         ));
@@ -68,11 +68,11 @@ public class SecondaryBotAdminService {
         jdbcTemplate.update("UPDATE users SET selected_deck_id=? WHERE id=?", deckId, userId);
         jdbcTemplate.update("""
                 INSERT INTO bot_personas(user_id, name, tier, thinking_time_ms,
-                    reaction_interval_frames, counter_aggression, enabled, hospitality)
-                VALUES (?, ?, CAST(? AS bot_tier), ?, ?, ?, ?, ?)
+                    reaction_interval_frames, counter_aggression, enabled, hospitality, temperament)
+                VALUES (?, ?, CAST(? AS bot_tier), ?, ?, ?, ?, ?, CAST(? AS bot_temperament))
                 """, userId, form.getName(), form.getTier(), form.getThinkingTimeMs(),
                 form.getReactionIntervalFrames(), form.getCounterAggression(), form.isEnabled(),
-                form.isHospitality());
+                form.isHospitality(), form.getTemperament());
     }
 
     public void update(long userId, BotForm form) {
@@ -80,11 +80,12 @@ public class SecondaryBotAdminService {
         int persona = jdbcTemplate.update("""
                 UPDATE bot_personas SET name=?, tier=CAST(? AS bot_tier), thinking_time_ms=?,
                     reaction_interval_frames=?, counter_aggression=?, enabled=?, hospitality=?,
+                    temperament=CAST(? AS bot_temperament),
                     updated_at=CURRENT_TIMESTAMP
                 WHERE user_id=?
                 """, form.getName(), form.getTier(), form.getThinkingTimeMs(),
                 form.getReactionIntervalFrames(), form.getCounterAggression(), form.isEnabled(),
-                form.isHospitality(), userId);
+                form.isHospitality(), form.getTemperament(), userId);
         int user = jdbcTemplate.update("UPDATE users SET mmr=?, status=CAST(? AS user_status) WHERE id=? AND id<0",
                 form.getMmr(), form.getStatus(), userId);
         if (persona != 1 || user != 1) throw new IllegalArgumentException("Dev bot not found: " + userId);
@@ -180,6 +181,7 @@ public class SecondaryBotAdminService {
         form.setReactionIntervalFrames(source.reactionIntervalFrames());
         form.setCounterAggression(source.counterAggression()); form.setEnabled(source.enabled());
         form.setHospitality(source.hospitality());
+        form.setTemperament(source.temperament());
         form.setMmr(source.mmr()); form.setStatus(source.status());
         form.setDeckName(source.selectedDeckName() == null ? "Bot Deck" : source.selectedDeckName());
         return form;
