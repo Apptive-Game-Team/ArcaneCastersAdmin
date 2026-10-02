@@ -31,40 +31,40 @@
                 </button>
                 <div class="form-group mt-3">
                     <label for="quest-search">Search</label>
-                    <input type="text" class="form-control" id="quest-search" placeholder="Search by id, checker, reward, or params">
+                    <input type="text" class="form-control" id="quest-search" placeholder="Search by id, condition, or reward">
                 </div>
 
                 <table class="table table-striped mt-3">
                     <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Progress Checker</th>
+                        <th>Condition Type</th>
+                        <th>Condition Target ID</th>
                         <th>Require Value</th>
-                        <th>Reward Giver</th>
-                        <th>Reward Params</th>
+                        <th>Rewards</th>
                         <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody id="quest-table-body">
                     <tr th:each="quest : ${quests}">
                         <td th:text="${quest.id}"></td>
-                        <td th:text="${quest.progressChecker}"></td>
+                        <td th:text="${quest.conditionType}"></td>
+                        <td th:text="${quest.conditionTargetId}"></td>
                         <td th:text="${quest.requireValue}"></td>
-                        <td th:text="${quest.rewardGiver}"></td>
                         <td>
                             <ul class="list-unstyled mb-0">
-                                <li th:each="rewardParam : ${quest.rewardParams}">
-                                    <small th:text="${rewardParam.name + ': ' + rewardParam.value}"></small>
+                                <li th:each="reward : ${quest.rewards}">
+                                    <small th:text="${reward.rewardType + (reward.targetId != null ? ' #' + reward.targetId : '') + ' x' + reward.amount}"></small>
                                 </li>
                             </ul>
                         </td>
                         <td>
                             <button type="button" class="btn btn-sm btn-info edit-quest-btn" 
                                     th:data-quest-id="${quest.id}"
-                                    th:data-progress-checker="${quest.progressChecker}"
+                                    th:data-condition-type="${quest.conditionType}"
+                                    th:data-condition-target-id="${quest.conditionTargetId}"
                                     th:data-require-value="${quest.requireValue}"
-                                    th:data-reward-giver="${quest.rewardGiver}"
-                                    th:data-reward-params="${quest.getRewardParamsString()}"
+                                    th:data-rewards="${#strings.arrayJoin(quest.rewards.![rewardType + '|' + (targetId != null ? targetId : '') + '|' + amount], ',')}"
                                     data-toggle="modal"
                                     data-target="#editQuestModal">
                                 Edit
@@ -81,6 +81,15 @@
         </div>
     </div>
 
+    <datalist id="conditionTypeOptions">
+        <option value="STAGE_CLEAR"></option>
+        <option value="TOTAL_WIN"></option>
+    </datalist>
+    <datalist id="rewardTypeOptions">
+        <option value="MAGIC"></option>
+        <option value="DECORATION"></option>
+    </datalist>
+
     <!-- Create Quest Modal -->
     <div class="modal fade" id="createQuestModal" tabindex="-1" aria-labelledby="createQuestModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -92,21 +101,21 @@
                 <div class="modal-body">
                     <form id="createQuestForm">
                         <div class="mb-3">
-                            <label for="createProgressChecker" class="form-label">Progress Checker (Bean Name)</label>
-                            <input type="text" class="form-control" id="createProgressChecker" name="progressChecker" maxlength="31">
+                            <label for="createConditionType" class="form-label">Condition Type</label>
+                            <input type="text" class="form-control" id="createConditionType" name="conditionType" list="conditionTypeOptions" maxlength="63" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createConditionTargetId" class="form-label">Condition Target ID (optional)</label>
+                            <input type="number" class="form-control" id="createConditionTargetId" name="conditionTargetId">
                         </div>
                         <div class="mb-3">
                             <label for="createRequireValue" class="form-label">Require Value</label>
                             <input type="number" class="form-control" id="createRequireValue" name="requireValue" required>
                         </div>
                         <div class="mb-3">
-                            <label for="createRewardGiver" class="form-label">Reward Giver (Bean Name)</label>
-                            <input type="text" class="form-control" id="createRewardGiver" name="rewardGiver" maxlength="31">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Reward Parameters</label>
-                            <div id="createRewardParamsList"></div>
-                            <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="addRewardParam('create')">Add Parameter</button>
+                            <label class="form-label">Rewards</label>
+                            <div id="createRewardsList"></div>
+                            <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="addReward('create')">Add Reward</button>
                         </div>
                     </form>
                 </div>
@@ -130,21 +139,21 @@
                     <form id="editQuestForm">
                         <input type="hidden" id="editQuestId" name="questId">
                         <div class="mb-3">
-                            <label for="editProgressChecker" class="form-label">Progress Checker (Bean Name)</label>
-                            <input type="text" class="form-control" id="editProgressChecker" name="progressChecker" maxlength="31">
+                            <label for="editConditionType" class="form-label">Condition Type</label>
+                            <input type="text" class="form-control" id="editConditionType" name="conditionType" list="conditionTypeOptions" maxlength="63" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editConditionTargetId" class="form-label">Condition Target ID (optional)</label>
+                            <input type="number" class="form-control" id="editConditionTargetId" name="conditionTargetId">
                         </div>
                         <div class="mb-3">
                             <label for="editRequireValue" class="form-label">Require Value</label>
                             <input type="number" class="form-control" id="editRequireValue" name="requireValue" required>
                         </div>
                         <div class="mb-3">
-                            <label for="editRewardGiver" class="form-label">Reward Giver (Bean Name)</label>
-                            <input type="text" class="form-control" id="editRewardGiver" name="rewardGiver" maxlength="31">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Reward Parameters</label>
-                            <div id="editRewardParamsList"></div>
-                            <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="addRewardParam('edit')">Add Parameter</button>
+                            <label class="form-label">Rewards</label>
+                            <div id="editRewardsList"></div>
+                            <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="addReward('edit')">Add Reward</button>
                         </div>
                     </form>
                 </div>
@@ -176,43 +185,54 @@
             }
         }
 
-        function addRewardParam(mode) {
-            const container = document.getElementById(mode + 'RewardParamsList');
-            const paramDiv = document.createElement('div');
-            paramDiv.className = 'input-group mb-2';
-            paramDiv.innerHTML = `
-                <input type="text" class="form-control param-name" placeholder="Parameter Name" maxlength="31">
-                <input type="number" class="form-control param-value" placeholder="Value">
+        function addReward(mode, reward) {
+            const container = document.getElementById(mode + 'RewardsList');
+            const rewardDiv = document.createElement('div');
+            rewardDiv.className = 'input-group mb-2';
+            rewardDiv.innerHTML = `
+                <input type="text" class="form-control reward-type" list="rewardTypeOptions" placeholder="Type" maxlength="63">
+                <input type="number" class="form-control reward-target" placeholder="Target ID (optional)">
+                <input type="number" class="form-control reward-amount" placeholder="Amount" min="1">
                 <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
             `;
-            container.appendChild(paramDiv);
+            if (reward) {
+                rewardDiv.querySelector('.reward-type').value = reward.rewardType;
+                rewardDiv.querySelector('.reward-target').value = reward.targetId ?? '';
+                rewardDiv.querySelector('.reward-amount').value = reward.amount;
+            }
+            container.appendChild(rewardDiv);
         }
 
-        function collectRewardParams(mode) {
-            const container = document.getElementById(mode + 'RewardParamsList');
-            const params = [];
-            const paramGroups = container.querySelectorAll('.input-group');
-            paramGroups.forEach(group => {
-                const name = group.querySelector('.param-name').value;
-                const value = parseInt(group.querySelector('.param-value').value);
-                if (name && !isNaN(value)) {
-                    params.push({ id: null, name: name, value: value });
+        function collectRewards(mode) {
+            const rewards = [];
+            document.querySelectorAll('#' + mode + 'RewardsList .input-group').forEach(group => {
+                const rewardType = group.querySelector('.reward-type').value.trim();
+                const targetText = group.querySelector('.reward-target').value;
+                const amount = parseInt(group.querySelector('.reward-amount').value);
+                if (rewardType && !isNaN(amount)) {
+                    rewards.push({
+                        id: null,
+                        rewardType: rewardType,
+                        targetId: targetText === '' ? null : parseInt(targetText),
+                        amount: amount
+                    });
                 }
             });
-            return params;
+            return rewards;
+        }
+
+        function collectQuest(mode) {
+            const targetText = document.getElementById(mode + 'ConditionTargetId').value;
+            return {
+                conditionType: document.getElementById(mode + 'ConditionType').value.trim(),
+                conditionTargetId: targetText === '' ? null : parseInt(targetText),
+                requireValue: parseInt(document.getElementById(mode + 'RequireValue').value),
+                rewards: collectRewards(mode)
+            };
         }
 
         function submitCreateQuest() {
-            const form = document.getElementById('createQuestForm');
-            const formData = new FormData(form);
-            const rewardParams = collectRewardParams('create');
-            
-            const data = {
-                progressChecker: formData.get('progressChecker') || null,
-                requireValue: parseInt(formData.get('requireValue')),
-                rewardGiver: formData.get('rewardGiver') || null,
-                rewardParams: rewardParams
-            };
+            const data = collectQuest('create');
 
             fetch(withDb('/api/admin/quests'), {
                 method: 'POST',
@@ -231,16 +251,7 @@
 
         function submitEditQuest() {
             const questId = document.getElementById('editQuestId').value;
-            const form = document.getElementById('editQuestForm');
-            const formData = new FormData(form);
-            const rewardParams = collectRewardParams('edit');
-            
-            const data = {
-                progressChecker: formData.get('progressChecker') || null,
-                requireValue: parseInt(formData.get('requireValue')),
-                rewardGiver: formData.get('rewardGiver') || null,
-                rewardParams: rewardParams
-            };
+            const data = collectQuest('edit');
 
             fetch(withDb(`/api/admin/quests/${questId}`), {
                 method: 'PUT',
@@ -281,33 +292,26 @@
             document.querySelectorAll('.edit-quest-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     const questId = this.getAttribute('data-quest-id');
-                    const progressChecker = this.getAttribute('data-progress-checker');
+                    const conditionType = this.getAttribute('data-condition-type');
+                    const conditionTargetId = this.getAttribute('data-condition-target-id');
                     const requireValue = this.getAttribute('data-require-value');
-                    const rewardGiver = this.getAttribute('data-reward-giver');
-                    const rewardParamsStr = this.getAttribute('data-reward-params');
+                    const rewardsStr = this.getAttribute('data-rewards');
 
                     document.getElementById('editQuestId').value = questId;
-                    document.getElementById('editProgressChecker').value = progressChecker || '';
+                    document.getElementById('editConditionType').value = conditionType || '';
+                    document.getElementById('editConditionTargetId').value = conditionTargetId || '';
                     document.getElementById('editRequireValue').value = requireValue;
-                    document.getElementById('editRewardGiver').value = rewardGiver || '';
 
-                    // Clear and populate reward params
-                    const container = document.getElementById('editRewardParamsList');
-                    container.innerHTML = '';
-                    
-                    if (rewardParamsStr) {
-                        const params = rewardParamsStr.split(',');
-                        params.forEach(param => {
-                            if (param) {
-                                const [name, value] = param.split(':');
-                                const paramDiv = document.createElement('div');
-                                paramDiv.className = 'input-group mb-2';
-                                paramDiv.innerHTML = `
-                                    <input type="text" class="form-control param-name" placeholder="Parameter Name" maxlength="31" value="${name}">
-                                    <input type="number" class="form-control param-value" placeholder="Value" value="${value}">
-                                    <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
-                                `;
-                                container.appendChild(paramDiv);
+                    document.getElementById('editRewardsList').innerHTML = '';
+                    if (rewardsStr) {
+                        rewardsStr.split(',').forEach(entry => {
+                            if (entry) {
+                                const [rewardType, targetId, amount] = entry.split('|');
+                                addReward('edit', {
+                                    rewardType: rewardType,
+                                    targetId: targetId === '' ? null : targetId,
+                                    amount: amount
+                                });
                             }
                         });
                     }

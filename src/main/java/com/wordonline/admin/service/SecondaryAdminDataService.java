@@ -5,7 +5,7 @@ import com.wordonline.admin.dto.adventure.AdventureDto;
 import com.wordonline.admin.dto.adventure.ScenarioDto;
 import com.wordonline.admin.dto.adventure.StageDto;
 import com.wordonline.admin.dto.quest.QuestDto;
-import com.wordonline.admin.dto.quest.RewardParamDto;
+import com.wordonline.admin.dto.quest.QuestRewardDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -32,8 +32,8 @@ public class SecondaryAdminDataService {
     public record AdventureRow(Long id, String name, String accessType) {}
     public record StageRow(Long id, Long adventureId) {}
     public record ScenarioRow(Long id, Long stageId) {}
-    public record QuestRow(Long id, String progressChecker, Integer requireValue, String rewardGiver) {}
-    public record RewardParamRow(Long id, Long questId, String name, Integer value) {}
+    public record QuestRow(Long id, String conditionType, Long conditionTargetId, Integer requireValue) {}
+    public record QuestRewardRow(Long id, Long questId, String rewardType, Long targetId, Integer amount) {}
     public record MagicRow(Long id, String name, String element, String accessType) {}
 
     public List<AdventureDto> getAdventures() {
@@ -58,20 +58,22 @@ public class SecondaryAdminDataService {
     }
 
     public List<QuestDto> getQuests() {
-        Map<Long, List<RewardParamDto>> rewardParamsByQuestId = getRewardParamRows().stream()
-                .map(row -> Map.entry(row.questId(), new RewardParamDto(row.id(), row.name(), row.value())))
+        Map<Long, List<QuestRewardDto>> rewardsByQuestId = getQuestRewardRows().stream()
                 .collect(Collectors.groupingBy(
-                        Map.Entry::getKey,
-                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+                        QuestRewardRow::questId,
+                        Collectors.mapping(
+                                row -> new QuestRewardDto(row.id(), row.rewardType(), row.targetId(), row.amount()),
+                                Collectors.toList()
+                        )
                 ));
 
         return getQuestRows().stream()
                 .map(row -> new QuestDto(
                         row.id(),
-                        row.progressChecker(),
+                        row.conditionType(),
+                        row.conditionTargetId(),
                         row.requireValue(),
-                        row.rewardGiver(),
-                        rewardParamsByQuestId.getOrDefault(row.id(), List.of())
+                        rewardsByQuestId.getOrDefault(row.id(), List.of())
                 ))
                 .toList();
     }
@@ -123,33 +125,39 @@ public class SecondaryAdminDataService {
         jdbcTemplate.update("delete from scenarios where id = ?", scenarioId);
     }
 
-    public Long createQuest(String progressChecker, Integer requireValue, String rewardGiver) {
+    public Long createQuest(String conditionType, Long conditionTargetId, Integer requireValue) {
         return jdbcTemplate.queryForObject(
-                "insert into quests (progress_checker, require_value, reward_giver) values (?, ?, ?) returning id",
+                "insert into quests (condition_type, condition_target_id, require_value) values (?, ?, ?) returning id",
                 Long.class,
-                progressChecker,
-                requireValue,
-                rewardGiver
+                conditionType,
+                conditionTargetId,
+                requireValue
         );
     }
 
-    public void updateQuest(Long id, String progressChecker, Integer requireValue, String rewardGiver) {
+    public void updateQuest(Long id, String conditionType, Long conditionTargetId, Integer requireValue) {
         jdbcTemplate.update(
-                "update quests set progress_checker = ?, require_value = ?, reward_giver = ? where id = ?",
-                progressChecker,
+                "update quests set condition_type = ?, condition_target_id = ?, require_value = ? where id = ?",
+                conditionType,
+                conditionTargetId,
                 requireValue,
-                rewardGiver,
                 id
         );
-        jdbcTemplate.update("delete from reward_params where quest_id = ?", id);
     }
 
     public void deleteQuest(Long id) {
         jdbcTemplate.update("delete from quests where id = ?", id);
     }
 
-    public void createRewardParam(Long questId, String name, Integer value) {
-        jdbcTemplate.update("insert into reward_params (quest_id, name, value) values (?, ?, ?)", questId, name, value);
+    public void deleteQuestRewards(Long questId) {
+        jdbcTemplate.update("delete from quest_rewards where quest_id = ?", questId);
+    }
+
+    public void createQuestReward(Long questId, String rewardType, Long targetId, Integer amount) {
+        jdbcTemplate.update(
+                "insert into quest_rewards (quest_id, reward_type, target_id, amount) values (?, ?, ?, ?)",
+                questId, rewardType, targetId, amount
+        );
     }
 
     public void createMagic(String name) {
@@ -282,33 +290,28 @@ public class SecondaryAdminDataService {
             QuestRow existing = existingQuests.get(quest.id());
             if (existing == null) {
                 jdbcTemplate.update(
-                        "insert into quests (id, progress_checker, require_value, reward_giver) values (?, ?, ?, ?)",
+                        "insert into quests (id, condition_type, condition_target_id, require_value) values (?, ?, ?, ?)",
                         quest.id(),
-                        quest.progressChecker(),
-                        quest.requireValue(),
-                        quest.rewardGiver()
+                        quest.conditionType(),
+                        quest.conditionTargetId(),
+                        quest.requireValue()
                 );
                 created++;
                 changed.add("quest#" + quest.id());
-            } else if (!Objects.equals(existing.progressChecker(), quest.progressChecker())
-                    || !Objects.equals(existing.requireValue(), quest.requireValue())
-                    || !Objects.equals(existing.rewardGiver(), quest.rewardGiver())) {
-                updateQuest(quest.id(), quest.progressChecker(), quest.requireValue(), quest.rewardGiver());
+            } else if (!Objects.equals(existing.conditionType(), quest.conditionType())
+                    || !Objects.equals(existing.conditionTargetId(), quest.conditionTargetId())
+                    || !Objects.equals(existing.requireValue(), quest.requireValue())) {
+                updateQuest(quest.id(), quest.conditionType(), quest.conditionTargetId(), quest.requireValue());
                 updated++;
                 changed.add("quest#" + quest.id());
             } else {
                 unchanged++;
-                jdbcTemplate.update("delete from reward_params where quest_id = ?", quest.id());
             }
 
-            for (RewardParamDto rewardParam : quest.rewardParams()) {
-                jdbcTemplate.update(
-                        "insert into reward_params (id, quest_id, name, value) values (?, ?, ?, ?) on conflict (id) do update set quest_id = excluded.quest_id, name = excluded.name, value = excluded.value",
-                        rewardParam.id(),
-                        quest.id(),
-                        rewardParam.name(),
-                        rewardParam.value()
-                );
+            // Rewards are replaced as a whole; ids are left to the secondary sequence.
+            deleteQuestRewards(quest.id());
+            for (QuestRewardDto reward : quest.rewards()) {
+                createQuestReward(quest.id(), reward.rewardType(), reward.targetId(), reward.amount());
             }
         }
 
@@ -381,24 +384,25 @@ public class SecondaryAdminDataService {
 
     public List<QuestRow> getQuestRows() {
         return jdbcTemplate.query(
-                "select id, progress_checker, require_value, reward_giver from quests order by id",
+                "select id, condition_type, condition_target_id, require_value from quests order by id",
                 (rs, rowNum) -> new QuestRow(
                         rs.getLong("id"),
-                        rs.getString("progress_checker"),
-                        rs.getObject("require_value", Integer.class),
-                        rs.getString("reward_giver")
+                        rs.getString("condition_type"),
+                        rs.getObject("condition_target_id", Long.class),
+                        rs.getObject("require_value", Integer.class)
                 )
         );
     }
 
-    public List<RewardParamRow> getRewardParamRows() {
+    public List<QuestRewardRow> getQuestRewardRows() {
         return jdbcTemplate.query(
-                "select id, quest_id, name, value from reward_params order by id",
-                (rs, rowNum) -> new RewardParamRow(
+                "select id, quest_id, reward_type, target_id, amount from quest_rewards order by id",
+                (rs, rowNum) -> new QuestRewardRow(
                         rs.getLong("id"),
                         rs.getLong("quest_id"),
-                        rs.getString("name"),
-                        rs.getObject("value", Integer.class)
+                        rs.getString("reward_type"),
+                        rs.getObject("target_id", Long.class),
+                        rs.getObject("amount", Integer.class)
                 )
         );
     }
