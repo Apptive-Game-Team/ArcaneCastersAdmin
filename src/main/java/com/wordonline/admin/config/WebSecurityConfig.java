@@ -40,6 +40,7 @@ public class WebSecurityConfig {
                                             "/logout",
                                             "/css/**",
                                             "/js/**",
+                                            "/images/**",
                                             "/healthcheck",
                                             "/error",
                                             "/favicon.ico",
