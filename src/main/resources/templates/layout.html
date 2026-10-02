@@ -5,9 +5,16 @@
     <head th:fragment="header(title)">
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title th:text="${title} ?: 'Word Online Admin'">Word Online Admin</title>
+        <title th:text="${title} ?: 'Arcane Casters Admin'">Arcane Casters Admin</title>
+        <link rel="icon" href="/favicon.ico" sizes="any">
+        <link rel="icon" type="image/png" sizes="32x32" th:href="@{/images/favicon-32.png}">
+        <meta name="theme-color" content="#050404">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <!-- Bootstrap CSS -->
         <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet">
+        <link th:href="@{/css/theevilent-theme.css}" rel="stylesheet">
     </head>
 
     <body>
