@@ -103,7 +103,7 @@ class StatisticPerformanceRenderTest {
         String html = render("/admin/statistics/performance?gameType=PVP&days=7");
 
         // 레이아웃 데코레이터와 nav 프래그먼트가 실제로 적용됐는지.
-        assertThat(html).contains("Word Online Admin", "/admin/statistics/performance");
+        assertThat(html).contains("Arcane Casters Admin", "/admin/statistics/performance");
         // 51.2ms와 63.4ms는 예산 50ms를 넘으므로 빨갛게 표시된다.
         assertThat(html).contains("51.20 ms", "63.40 ms", "text-danger");
         // 느린 순 정렬이므로 Frame이 PhysicSystem보다 앞에 온다.

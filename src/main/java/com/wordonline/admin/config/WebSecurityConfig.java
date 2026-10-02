@@ -35,7 +35,6 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(authorizeRequests -> {
                             authorizeRequests
                                     .requestMatchers(
-                                            "/",
                                             "/login",
                                             "/logout",
                                             "/css/**",
