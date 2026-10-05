@@ -1,6 +1,7 @@
 package com.wordonline.admin.config;
 
 import com.wordonline.admin.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.boot.actuate.health.HealthEndpoint;
@@ -51,6 +52,11 @@ public class WebSecurityConfig {
                 )
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
+                            // fetch calls cannot follow a login redirect, so they get a 401 instead.
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                                return;
+                            }
                             response.sendRedirect("/login");
                         })
                 )
