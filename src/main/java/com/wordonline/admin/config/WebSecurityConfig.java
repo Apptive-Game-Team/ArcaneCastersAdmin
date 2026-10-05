@@ -35,11 +35,11 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(authorizeRequests -> {
                             authorizeRequests
                                     .requestMatchers(
-                                            "/",
                                             "/login",
                                             "/logout",
                                             "/css/**",
                                             "/js/**",
+                                            "/images/**",
                                             "/healthcheck",
                                             "/error",
                                             "/favicon.ico",

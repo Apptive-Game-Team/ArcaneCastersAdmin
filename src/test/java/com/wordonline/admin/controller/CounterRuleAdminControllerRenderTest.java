@@ -69,7 +69,7 @@ class CounterRuleAdminControllerRenderTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(html).contains("Word Online Admin", "/admin/counter-rule");
+        assertThat(html).contains("Arcane Casters Admin", "/admin/counter-rule");
         assertThat(html).contains("CAT_AoE", "CAT_Small", "table-warning");
         assertThat(html).contains("bubble_spirit", "CAT_Small, TYPE_Unit");
         // 이 화면의 핵심. 태그가 없는 마법은 어떤 봇의 상성 판단에도 들어가지 않는다.
