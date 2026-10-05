@@ -1,5 +1,7 @@
 server:
   port: ${PORT:8080}
+  # Behind the reverse proxy, redirects must use the public scheme and host.
+  forward-headers-strategy: framework
 
 # Metrics run on their own port so the public app port never serves /actuator.
 # Health and Prometheus endpoints allow unauthenticated scrapes.
