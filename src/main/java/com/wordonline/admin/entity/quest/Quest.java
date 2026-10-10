@@ -11,6 +11,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * The legacy progress_checker and reward_giver columns are intentionally not mapped:
+ * they are nullable in the schema and must be neither read nor written.
+ */
 @Entity
 @Table(name = "quests")
 @Getter
@@ -22,12 +26,12 @@ public class Quest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "progress_checker", length = 31)
-    private String progressChecker;
+    @Column(name = "condition_type", nullable = false, length = 63)
+    private String conditionType;
+
+    @Column(name = "condition_target_id")
+    private Long conditionTargetId;
 
     @Column(name = "require_value", nullable = false)
     private Integer requireValue;
-
-    @Column(name = "reward_giver", length = 31)
-    private String rewardGiver;
 }

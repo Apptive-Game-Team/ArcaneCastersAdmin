@@ -15,23 +15,26 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "reward_params")
+@Table(name = "quest_rewards")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RewardParam {
+public class QuestReward {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "quest_id")
+    @JoinColumn(name = "quest_id", nullable = false)
     private Quest quest;
 
-    @Column(nullable = false, length = 31)
-    private String name;
+    @Column(name = "reward_type", nullable = false, length = 63)
+    private String rewardType;
+
+    @Column(name = "target_id")
+    private Long targetId;
 
     @Column(nullable = false)
-    private Integer value;
+    private Integer amount;
 }
