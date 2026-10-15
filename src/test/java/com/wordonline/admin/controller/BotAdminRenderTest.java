@@ -40,7 +40,7 @@ class BotAdminRenderTest {
     private JwtDecoder jwtDecoder;
 
     private final BotAdminDto hospitalityBot = new BotAdminDto(-5L, "Warm Welcome", "HOSPITALITY",
-            1200, 30, -1.0, true, true, "STOIC", (short) 600, "Online", 9L, "Warm Welcome", List.of());
+            1200, 30, -1.0, true, true, "STOIC", (short) 600, "Online", 9L, "Warm Welcome", "JEV", "jev-latest", List.of());
 
     @Test
     @WithMockUser(authorities = "WORDONLINE_ADMIN")

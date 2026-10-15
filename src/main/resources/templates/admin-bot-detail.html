@@ -15,6 +15,9 @@
                     <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="hospitality-primary" name="hospitality" value="true" th:checked="${data.hospitality}"><input type="hidden" name="_hospitality"><label class="form-check-label" for="hospitality-primary">Hospitality — 튜토리얼 전용 상대. 랜덤 연습 풀에서 제외된다</label></div>
                     <label>Temperament</label><select class="form-select" name="temperament"><option th:each="temperament : ${ {'WARM','SMUG','TIMID','STOIC'} }" th:value="${temperament}" th:text="${temperament}" th:selected="${temperament == data.temperament}"></option></select>
                     <div class="form-text">봇이 쓰는 emote 선택과 빈도만 정한다. tier·counter aggression과 달리 실력과는 무관하다.</div>
+                    <label>Brain type</label><select class="form-select" name="brainType"><option th:each="brain : ${ {'RULE','JEV','OPENROUTER'} }" th:value="${brain}" th:text="${brain}" th:selected="${brain == data.brainType}"></option></select>
+                    <label>LLM model</label><input class="form-control" name="llmModel" maxlength="100" th:value="${data.llmModel}" placeholder="기본값: jev-latest / openrouter/auto">
+                    <div class="form-text">RULE 이면 무시한다. 비우면 provider 기본 모델을 쓴다.</div>
                     <div class="row"><div class="col"><label>MMR</label><input class="form-control" name="mmr" type="number" th:value="${data.mmr}"></div><div class="col"><label>Status</label><select class="form-select" name="status"><option th:each="s : ${ {'Online','OnMatching','OnPlaying'} }" th:value="${s}" th:text="${s}" th:selected="${s == data.status}"></option></select></div></div>
                     <label>Thinking ms</label><input class="form-control" name="thinkingTimeMs" type="number" min="0" th:value="${data.thinkingTimeMs}">
                     <label>Reaction frames</label><input class="form-control" name="reactionIntervalFrames" type="number" min="1" th:value="${data.reactionIntervalFrames}">
@@ -45,6 +48,9 @@
                     <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="hospitality-secondary" name="hospitality" value="true" th:checked="${data.hospitality}"><input type="hidden" name="_hospitality"><label class="form-check-label" for="hospitality-secondary">Hospitality — 튜토리얼 전용 상대. 랜덤 연습 풀에서 제외된다</label></div>
                     <label>Temperament</label><select class="form-select" name="temperament"><option th:each="temperament : ${ {'WARM','SMUG','TIMID','STOIC'} }" th:value="${temperament}" th:text="${temperament}" th:selected="${temperament == data.temperament}"></option></select>
                     <div class="form-text">봇이 쓰는 emote 선택과 빈도만 정한다. tier·counter aggression과 달리 실력과는 무관하다.</div>
+                    <label>Brain type</label><select class="form-select" name="brainType"><option th:each="brain : ${ {'RULE','JEV','OPENROUTER'} }" th:value="${brain}" th:text="${brain}" th:selected="${brain == data.brainType}"></option></select>
+                    <label>LLM model</label><input class="form-control" name="llmModel" maxlength="100" th:value="${data.llmModel}" placeholder="기본값: jev-latest / openrouter/auto">
+                    <div class="form-text">RULE 이면 무시한다. 비우면 provider 기본 모델을 쓴다.</div>
                     <div class="row"><div class="col"><label>MMR</label><input class="form-control" name="mmr" type="number" th:value="${data.mmr}"></div><div class="col"><label>Status</label><select class="form-select" name="status"><option th:each="s : ${ {'Online','OnMatching','OnPlaying'} }" th:value="${s}" th:text="${s}" th:selected="${s == data.status}"></option></select></div></div>
                     <label>Thinking ms</label><input class="form-control" name="thinkingTimeMs" type="number" min="0" th:value="${data.thinkingTimeMs}">
                     <label>Reaction frames</label><input class="form-control" name="reactionIntervalFrames" type="number" min="1" th:value="${data.reactionIntervalFrames}">
