@@ -16,6 +16,8 @@ public record BotAdminDto(
         String status,
         Long selectedDeckId,
         String selectedDeckName,
+        String brainType,
+        String llmModel,
         List<BotDeckCardDto> cards
 ) {
 }

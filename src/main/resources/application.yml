@@ -18,6 +18,9 @@ management:
       application: ${spring.application.name}
 
 word-online:
+  llm:
+    # Same value as the game server's LLM_KEY_SECRET. Blank refuses saving LLM API keys.
+    key-secret: ${LLM_KEY_SECRET:}
   jwt:
     path: ${JWT_FILE_PATH}
   secondary-datasource:

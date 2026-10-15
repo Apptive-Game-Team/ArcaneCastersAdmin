@@ -105,7 +105,7 @@ class BotAdminServiceTest {
     void upsertCarriesHospitalityIntoTheDeployUpdate() {
         BotAdminService service = new BotAdminService(repository);
         BotAdminDto source = new BotAdminDto(-5L, "Warm Welcome", "HOSPITALITY", 1200, 30, -1.0,
-                true, true, "STOIC", (short) 600, "Online", 9L, "Warm Welcome", List.of());
+                true, true, "STOIC", (short) 600, "Online", 9L, "Warm Welcome", "RULE", null, List.of());
         when(repository.findByUserId(-5L)).thenReturn(Optional.of(source));
 
         service.upsert(source);
@@ -138,6 +138,28 @@ class BotAdminServiceTest {
         form.setTemperament("GRUMPY");
 
         assertThrows(IllegalArgumentException.class, () -> service.create(form));
+    }
+
+    @Test
+    void normalizesBrainFieldsAndRejectsUnknownBrainType() {
+        BotAdminService service = new BotAdminService(repository);
+        BotForm form = validForm();
+        form.setBrainType("");
+        form.setLlmModel("   ");
+        service.validateForm(form);
+        assertEquals("RULE", form.getBrainType());
+        assertEquals(null, form.getLlmModel());
+
+        form.setBrainType("OPENROUTER");
+        form.setLlmModel("  openai/gpt-4o  ");
+        service.validateForm(form);
+        assertEquals("openai/gpt-4o", form.getLlmModel());
+
+        form.setLlmModel("x".repeat(101));
+        assertThrows(IllegalArgumentException.class, () -> service.validateForm(form));
+        form.setLlmModel(null);
+        form.setBrainType("GPT");
+        assertThrows(IllegalArgumentException.class, () -> service.validateForm(form));
     }
 
     private BotForm validForm() {
