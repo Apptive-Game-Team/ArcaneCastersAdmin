@@ -22,9 +22,7 @@ public class SecondaryLlmKeyAdminService {
 
     @Transactional(readOnly = true, transactionManager = "secondaryTransactionManager")
     public List<LlmKeyStatusDto> findAll() {
-        return jdbcTemplate.query("SELECT provider, key_hint, updated_at FROM llm_api_keys ORDER BY provider",
-                (rs, rowNum) -> new LlmKeyStatusDto(rs.getString("provider"), rs.getString("key_hint"),
-                        rs.getObject("updated_at", java.time.LocalDateTime.class)));
+        return jdbcTemplate.query(LlmKeyStatusDto.SELECT, (rs, rowNum) -> LlmKeyStatusDto.from(rs));
     }
 
     public void save(LlmProvider provider, String encryptedKey, String keyHint) {
@@ -32,8 +30,14 @@ public class SecondaryLlmKeyAdminService {
                 INSERT INTO llm_api_keys(provider, encrypted_key, key_hint, updated_at)
                 VALUES (?, ?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT (provider) DO UPDATE SET encrypted_key=EXCLUDED.encrypted_key,
-                    key_hint=EXCLUDED.key_hint, updated_at=CURRENT_TIMESTAMP
+                    key_hint=EXCLUDED.key_hint, updated_at=CURRENT_TIMESTAMP,
+                    unavailable_until=NULL, unavailable_reason=NULL
                 """, provider.name(), encryptedKey, keyHint);
+    }
+
+    public void clearUnavailable(LlmProvider provider) {
+        jdbcTemplate.update("UPDATE llm_api_keys SET unavailable_until=NULL, unavailable_reason=NULL WHERE provider=?",
+                provider.name());
     }
 
     public void delete(LlmProvider provider) {

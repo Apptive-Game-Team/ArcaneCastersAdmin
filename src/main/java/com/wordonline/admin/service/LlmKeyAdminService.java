@@ -26,6 +26,10 @@ public class LlmKeyAdminService {
         repository.upsert(provider.name(), encryptedKey, keyHint);
     }
 
+    public void clearUnavailable(LlmProvider provider) {
+        repository.clearUnavailable(provider.name());
+    }
+
     public void delete(LlmProvider provider) {
         repository.delete(provider.name());
     }

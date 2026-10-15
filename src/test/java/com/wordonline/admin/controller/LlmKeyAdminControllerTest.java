@@ -49,7 +49,7 @@ class LlmKeyAdminControllerTest {
     void pageShowsTheHintAndNeverTheKey() throws Exception {
         when(keyService.comparisons()).thenReturn(List.of(
                 new LlmKeyComparisonDto(LlmProvider.JEV,
-                        new LlmKeyStatusDto("JEV", "…1234", LocalDateTime.of(2026, 10, 15, 9, 30)), null),
+                        new LlmKeyStatusDto("JEV", "…1234", LocalDateTime.of(2026, 10, 15, 9, 30), null, null, false), null),
                 new LlmKeyComparisonDto(LlmProvider.OPENROUTER, null, null)));
         when(keyService.hasSecondary()).thenReturn(false);
         when(keyService.cipherConfigured()).thenReturn(true);
@@ -112,6 +112,37 @@ class LlmKeyAdminControllerTest {
                 .andExpect(redirectedUrl("/admin/llm-keys"))
                 .andExpect(flash().attribute("message", "JEV API key deleted"));
         verify(keyService).delete(LlmProvider.JEV, Target.PRIMARY);
+    }
+
+    @Test
+    @WithMockUser(authorities = "WORDONLINE_ADMIN")
+    void pageShowsTheUnavailableBadgeOnlyWhileInEffect() throws Exception {
+        LocalDateTime updated = LocalDateTime.of(2026, 10, 15, 9, 30);
+        when(keyService.comparisons()).thenReturn(List.of(
+                new LlmKeyComparisonDto(LlmProvider.JEV,
+                        new LlmKeyStatusDto("JEV", "…1234", updated,
+                                LocalDateTime.of(2026, 10, 16, 3, 5), "402 no balance", true), null),
+                new LlmKeyComparisonDto(LlmProvider.OPENROUTER,
+                        new LlmKeyStatusDto("OPENROUTER", "…9999", updated,
+                                LocalDateTime.of(2026, 10, 14, 1, 0), "expired reason", false), null)));
+        when(keyService.hasSecondary()).thenReturn(false);
+        when(keyService.cipherConfigured()).thenReturn(true);
+
+        String html = mockMvc.perform(get("/admin/llm-keys")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("사용 불가").contains("402 no balance").contains("2026-10-16 03:05");
+        assertThat(html).doesNotContain("expired reason").doesNotContain("2026-10-14 01:00");
+        assertThat(html).contains("rule 기반 bot 만 매칭").contains("사용 가능으로 되돌리기");
+    }
+
+    @Test
+    @WithMockUser(authorities = "WORDONLINE_ADMIN")
+    void clearUnavailableCallsTheServiceAndRedirects() throws Exception {
+        mockMvc.perform(post("/admin/llm-keys/jev/available").param("db", "both").with(csrf()))
+                .andExpect(redirectedUrl("/admin/llm-keys"))
+                .andExpect(flash().attribute("message", "JEV marked available"));
+        verify(keyService).clearUnavailable(LlmProvider.JEV, Target.BOTH);
     }
 
     @Test

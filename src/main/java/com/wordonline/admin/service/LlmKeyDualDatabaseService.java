@@ -55,6 +55,15 @@ public class LlmKeyDualDatabaseService {
         if (target != Target.PRIMARY) applySecondary(target, "save", () -> secondary().save(provider, encrypted, hint));
     }
 
+    /** key 는 그대로 두고 unavailable 표시만 지운다. LLM_KEY_SECRET 이 없어도 동작한다. */
+    public void clearUnavailable(LlmProvider provider, Target target) {
+        requireSecondary(target);
+        if (target != Target.SECONDARY) primary.clearUnavailable(provider);
+        if (target != Target.PRIMARY) {
+            applySecondary(target, "clear", () -> secondary().clearUnavailable(provider));
+        }
+    }
+
     public void delete(LlmProvider provider, Target target) {
         requireSecondary(target);
         if (target != Target.SECONDARY) primary.delete(provider);

@@ -59,6 +59,20 @@ public class LlmKeyAdminController {
         return "redirect:/admin/llm-keys";
     }
 
+    @PostMapping("/{provider}/available")
+    public String clearUnavailable(@PathVariable String provider,
+                                   @RequestParam(defaultValue = "primary") String db,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            LlmProvider llmProvider = LlmProvider.from(provider);
+            keyService.clearUnavailable(llmProvider, target(db));
+            redirectAttributes.addFlashAttribute("message", llmProvider.name() + " marked available");
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        }
+        return "redirect:/admin/llm-keys";
+    }
+
     private Target target(String db) {
         return switch (db == null ? "primary" : db.toLowerCase()) {
             case "secondary" -> Target.SECONDARY;
