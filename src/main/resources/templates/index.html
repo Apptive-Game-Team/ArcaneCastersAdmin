@@ -117,7 +117,7 @@
                                     </div>
                                     <div class="mb-2">
                                         <strong>Domain:</strong> 
-                                        <span class="text-break" th:text="${server.domain}">localhost</span>
+                                        <span class="text-break" th:text="${server.domain}">127.0.0.1</span>
                                     </div>
                                     <div class="mb-2">
                                         <strong>Port:</strong> 
@@ -126,7 +126,7 @@
                                     <div>
                                         <strong>URL:</strong> 
                                         <a th:href="${server.url}" target="_blank" class="text-decoration-none">
-                                            <span class="text-break" th:text="${server.url}">http://localhost:8080</span>
+                                            <span class="text-break" th:text="${server.url}">http://127.0.0.1:8080</span>
                                         </a>
                                     </div>
                                 </div>
@@ -180,7 +180,7 @@
                                     <div class="text-start small">
                                         <div class="mb-2"><strong>ID:</strong> <span th:text="${server.id}">1</span></div>
                                         <div class="mb-2"><strong>Protocol:</strong> <span th:text="${server.protocol}">http</span></div>
-                                        <div class="mb-2"><strong>Domain:</strong> <span class="text-break" th:text="${server.domain}">localhost</span></div>
+                                        <div class="mb-2"><strong>Domain:</strong> <span class="text-break" th:text="${server.domain}">127.0.0.1</span></div>
                                         <div class="mb-2"><strong>Port:</strong> <span th:text="${server.port}">8080</span></div>
                                         <div><strong>URL:</strong> <a th:href="${server.url}" target="_blank" class="text-decoration-none"><span class="text-break" th:text="${server.url}">url</span></a></div>
                                     </div>
