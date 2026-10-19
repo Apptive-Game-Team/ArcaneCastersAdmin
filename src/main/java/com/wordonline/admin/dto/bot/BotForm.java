@@ -17,4 +17,7 @@ public class BotForm {
     private short mmr = 1000;
     private String status = "Online";
     private String deckName = "Bot Deck";
+    // RULE 은 규칙 기반 BotBrain, JEV·OPENROUTER 는 LLM 이 고른다. llmModel 이 null 이면 provider 기본 모델.
+    private String brainType = "RULE";
+    private String llmModel;
 }

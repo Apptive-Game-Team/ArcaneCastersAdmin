@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head th:replace="~{layout :: header('LLM API Key')}"></head>
+<body><main layout:fragment="content">
+    <h1>LLM API Key</h1>
+    <p class="text-muted">game 서버 .env 에 같은 LLM_KEY_SECRET 이 있어야 저장한 key 를 복호화할 수 있다. key 는 암호화해 저장하며 다시 보여주지 않는다.</p>
+    <div class="alert alert-success" th:if="${message}" th:text="${message}"></div>
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+    <div class="alert alert-warning" th:unless="${cipherConfigured}">LLM_KEY_SECRET 이 설정되지 않아 key 를 저장할 수 없다. 삭제는 할 수 있다.</div>
+    <p class="text-muted">사용 불가인 동안에는 그 provider 를 쓰는 bot 을 매칭하지 않고, rule 기반 bot 만 매칭한다.</p>
+    <div class="row">
+        <div class="col-lg-6 mb-4" th:each="key : ${keys}">
+            <div class="card"><div class="card-body">
+                <h2 class="h4" th:text="${key.label}"></h2>
+                <small class="text-muted" th:text="|기본 모델: ${key.defaultModel}|"></small>
+                <table class="table table-sm mt-2">
+                    <thead><tr><th></th><th>Deploy</th><th>Dev</th></tr></thead>
+                    <tbody>
+                        <tr><th>Key</th>
+                            <td th:if="${key.primarySet}"><span class="badge bg-success">설정됨</span> <code th:text="${key.primary.keyHint}"></code></td>
+                            <td th:unless="${key.primarySet}"><span class="badge bg-secondary">없음</span></td>
+                            <td th:if="${!secondaryDatabaseEnabled}" class="text-muted">N/A</td>
+                            <td th:if="${secondaryDatabaseEnabled and key.secondarySet}"><span class="badge bg-success">설정됨</span> <code th:text="${key.secondary.keyHint}"></code></td>
+                            <td th:if="${secondaryDatabaseEnabled and !key.secondarySet}"><span class="badge bg-secondary">없음</span></td>
+                        </tr>
+                        <tr><th>상태</th>
+                            <td>
+                                <span th:if="${key.primary != null and key.primary.unavailable}">
+                                    <span class="badge bg-danger">사용 불가</span>
+                                    <small th:text="|${key.primary.unavailableReason} (${#temporals.format(key.primary.unavailableUntil, 'yyyy-MM-dd HH:mm')} 까지)|"></small>
+                                </span>
+                            </td>
+                            <td>
+                                <span th:if="${secondaryDatabaseEnabled and key.secondary != null and key.secondary.unavailable}">
+                                    <span class="badge bg-danger">사용 불가</span>
+                                    <small th:text="|${key.secondary.unavailableReason} (${#temporals.format(key.secondary.unavailableUntil, 'yyyy-MM-dd HH:mm')} 까지)|"></small>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr><th>Updated</th>
+                            <td th:text="${key.primarySet} ? ${#temporals.format(key.primary.updatedAt, 'yyyy-MM-dd HH:mm')} : '-'"></td>
+                            <td th:text="${key.secondarySet} ? ${#temporals.format(key.secondary.updatedAt, 'yyyy-MM-dd HH:mm')} : '-'"></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <form method="post" th:action="@{/admin/llm-keys/{provider}(provider=${key.name})}" autocomplete="off">
+                    <label class="form-label">Apply to</label>
+                    <select class="form-select" name="db">
+                        <option value="primary">Deploy</option>
+                        <option value="secondary" th:disabled="${!secondaryDatabaseEnabled}">Dev</option>
+                        <option value="both" th:disabled="${!secondaryDatabaseEnabled}">Deploy + Dev</option>
+                    </select>
+                    <label class="form-label mt-2">새 API key</label>
+                    <input class="form-control" type="password" name="apiKey" autocomplete="new-password" required th:disabled="${!cipherConfigured}">
+                    <button class="btn btn-primary mt-2" type="submit" th:disabled="${!cipherConfigured}">Save</button>
+                </form>
+                <form class="mt-2" method="post" th:action="@{/admin/llm-keys/{provider}/available(provider=${key.name})}">
+                    <select class="form-select d-inline w-auto" name="db">
+                        <option value="primary">Deploy</option>
+                        <option value="secondary" th:disabled="${!secondaryDatabaseEnabled}">Dev</option>
+                        <option value="both" th:disabled="${!secondaryDatabaseEnabled}">Deploy + Dev</option>
+                    </select>
+                    <button class="btn btn-outline-secondary" type="submit">사용 가능으로 되돌리기</button>
+                </form>
+                <form class="mt-2" method="post" th:action="@{/admin/llm-keys/{provider}/delete(provider=${key.name})}" onsubmit="return confirm('API key 를 삭제할까요?')">
+                    <select class="form-select d-inline w-auto" name="db">
+                        <option value="primary">Deploy</option>
+                        <option value="secondary" th:disabled="${!secondaryDatabaseEnabled}">Dev</option>
+                        <option value="both" th:disabled="${!secondaryDatabaseEnabled}">Deploy + Dev</option>
+                    </select>
+                    <button class="btn btn-danger" type="submit">Delete</button>
+                </form>
+            </div></div>
+        </div>
+    </div>
+</main></body></html>

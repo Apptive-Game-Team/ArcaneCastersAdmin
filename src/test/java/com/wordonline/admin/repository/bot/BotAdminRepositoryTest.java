@@ -46,7 +46,7 @@ class BotAdminRepositoryTest {
                 invocation.getArgument(0, String.class).contains("bot_personas") ? personaQuery : deckQuery);
         when(personaQuery.getResultList()).thenReturn(Collections.singletonList(new Object[]{
                 -5L, "Warm Welcome", "HOSPITALITY", 1200, 30, -1.0, true, true, "STOIC",
-                (short) 600, "Online", 7L, "Warm Welcome"
+                (short) 600, "Online", 7L, "Warm Welcome", "OPENROUTER", "openai/gpt-4o"
         }));
         when(deckQuery.setParameter(anyString(), any())).thenReturn(deckQuery);
         when(deckQuery.getResultList()).thenReturn(List.of());
@@ -63,6 +63,8 @@ class BotAdminRepositoryTest {
         assertEquals("Online", bot.status());
         assertEquals(7L, bot.selectedDeckId());
         assertEquals("Warm Welcome", bot.selectedDeckName());
+        assertEquals("OPENROUTER", bot.brainType());
+        assertEquals("openai/gpt-4o", bot.llmModel());
     }
 
     @Test
@@ -87,6 +89,7 @@ class BotAdminRepositoryTest {
         assertTrue(statements.getAllValues().stream()
                 .anyMatch(sql -> sql.contains("UPDATE bot_personas") && sql.contains("temperament=CAST(:temperament AS bot_temperament)")));
         verify(query, org.mockito.Mockito.times(2)).setParameter(eq("temperament"), eq("STOIC"));
+        verify(query, org.mockito.Mockito.times(2)).setParameter(eq("brainType"), eq("RULE"));
     }
 
     private BotForm hospitalityForm() {
