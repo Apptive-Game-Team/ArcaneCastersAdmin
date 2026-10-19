@@ -141,6 +141,8 @@ pre { color: var(--ent-text-secondary); }
   color: var(--ent-text);
 }
 .dropdown-item { color: var(--ent-text-secondary); }
+.dropdown-item.active, .dropdown-item:active { background: var(--ent-primary-deep); color: #fff; }
+.navbar-dark .navbar-nav .nav-link.active { color: var(--ent-primary-hover); }
 .list-group-item.active {
   background: var(--ent-primary-deep);
   border-color: var(--ent-primary);
