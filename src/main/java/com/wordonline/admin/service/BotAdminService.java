@@ -124,6 +124,8 @@ public class BotAdminService {
         form.setMmr(source.mmr());
         form.setStatus(source.status());
         form.setDeckName(source.selectedDeckName() == null ? "Bot Deck" : source.selectedDeckName());
+        form.setBrainType(source.brainType());
+        form.setLlmModel(source.llmModel());
         return form;
     }
 
@@ -146,6 +148,19 @@ public class BotAdminService {
         if (form.getCounterAggression() < -1 || form.getCounterAggression() > 1) {
             throw new IllegalArgumentException("Counter aggression must be between -1 and 1");
         }
+        if (form.getBrainType() == null || form.getBrainType().isBlank()) {
+            form.setBrainType("RULE");
+        }
+        form.setBrainType(form.getBrainType().trim());
+        if (!List.of("RULE", "JEV", "OPENROUTER").contains(form.getBrainType())) {
+            throw new IllegalArgumentException("Unsupported bot brain type");
+        }
+        String llmModel = form.getLlmModel() == null ? null : form.getLlmModel().trim();
+        if (llmModel != null && llmModel.isEmpty()) llmModel = null;
+        if (llmModel != null && llmModel.length() > 100) {
+            throw new IllegalArgumentException("LLM model must be at most 100 characters");
+        }
+        form.setLlmModel(llmModel);
         if (!List.of("Online", "OnMatching", "OnPlaying").contains(form.getStatus())) {
             throw new IllegalArgumentException("Unsupported user status");
         }

@@ -7,56 +7,76 @@
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav">
+        <ul class="navbar-nav" id="adminNavMenu">
             <li class="nav-item">
                 <a class="nav-link" th:href="@{/}">Home</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/game-object}">GameObjects</a>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navGameData" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Game Data</a>
+                <div class="dropdown-menu" aria-labelledby="navGameData">
+                    <a class="dropdown-item" th:href="@{/admin/game-object}">GameObjects</a>
+                    <a class="dropdown-item" th:href="@{/admin/parameter}">Add Parameter</a>
+                    <a class="dropdown-item" th:href="@{/admin/magic}">Magic</a>
+                    <a class="dropdown-item" th:href="@{/admin/tag}">Tag</a>
+                    <a class="dropdown-item" th:href="@{/admin/counter-rule}">Counter Rules</a>
+                    <a class="dropdown-item" th:href="@{/admin/spread-sheets/game-objects?tags=TYPE_Unit}">Spreadsheet</a>
+                </div>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/parameter}">Add Parameter</a>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navContent" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Content</a>
+                <div class="dropdown-menu" aria-labelledby="navContent">
+                    <a class="dropdown-item" th:href="@{/admin/adventure}">Adventure</a>
+                    <a class="dropdown-item" th:href="@{/admin/quest}">Quest</a>
+                </div>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/statistics}">Statistics</a>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navBots" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Bots</a>
+                <div class="dropdown-menu" aria-labelledby="navBots">
+                    <a class="dropdown-item" th:href="@{/admin/bot}">Bots</a>
+                    <a class="dropdown-item" th:href="@{/admin/llm-keys}">LLM API Key</a>
+                </div>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/statistics/performance}">Performance</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/game-sessions}">Game Sessions</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/magic}">Magic</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/tag}">Tag</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/quest}">Quest</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/adventure}">Adventure</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/deploy-status}">Deploy Status</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/bot}">Bots</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/counter-rule}">Counter Rules</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" th:href="@{/admin/spread-sheets/game-objects?tags=TYPE_Unit}">Spreadsheet</a>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navOperations" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Operations</a>
+                <div class="dropdown-menu" aria-labelledby="navOperations">
+                    <a class="dropdown-item" th:href="@{/admin/statistics}">Statistics</a>
+                    <a class="dropdown-item" th:href="@{/admin/statistics/performance}">Performance</a>
+                    <a class="dropdown-item" th:href="@{/admin/game-sessions}">Game Sessions</a>
+                    <a class="dropdown-item" th:href="@{/admin/deploy-status}">Deploy Status</a>
+                </div>
             </li>
         </ul>
-        <ul class="navbar-nav ms-auto">
+        <ul class="navbar-nav ml-auto">
             <li class="nav-item" sec:authorize="isAuthenticated()">
                 <a class="nav-link" th:href="@{/logout}">Logout</a>
             </li>
         </ul>
     </div>
+    <script>
+        // Marks the menu entry whose path is the longest prefix of the current path, so
+        // /admin/statistics/performance picks Performance and /admin/bot/7 picks Bots.
+        (function () {
+            var path = window.location.pathname.replace(/\/+$/, '') || '/';
+            var best = null;
+            var bestLength = -1;
+            document.querySelectorAll('#adminNavMenu a[href]:not(.dropdown-toggle)').forEach(function (link) {
+                var linkPath = new URL(link.href, window.location.origin).pathname.replace(/\/+$/, '') || '/';
+                var matches = linkPath === '/' ? path === '/' : (path === linkPath || path.indexOf(linkPath + '/') === 0);
+                if (matches && linkPath.length > bestLength) {
+                    best = link;
+                    bestLength = linkPath.length;
+                }
+            });
+            if (!best) {
+                return;
+            }
+            best.classList.add('active');
+            var dropdown = best.closest('.dropdown');
+            if (dropdown) {
+                dropdown.querySelector('.dropdown-toggle').classList.add('active');
+            }
+        })();
+    </script>
 </nav>
 
 </html>

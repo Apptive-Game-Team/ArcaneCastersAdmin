@@ -61,7 +61,7 @@ class SecondaryBotAdminServiceTest {
         service.create(-5L, hospitalityForm());
 
         verify(jdbcTemplate).update(contains("INSERT INTO bot_personas"), eq(-5L), eq("Warm Welcome"),
-                eq("HOSPITALITY"), eq(1200), eq(30), eq(-1.0), eq(true), eq(true), eq("STOIC"));
+                eq("HOSPITALITY"), eq(1200), eq(30), eq(-1.0), eq(true), eq(true), eq("STOIC"), eq("RULE"), eq(null));
     }
 
     @Test
@@ -72,7 +72,7 @@ class SecondaryBotAdminServiceTest {
         service.update(-5L, hospitalityForm());
 
         verify(jdbcTemplate).update(contains("UPDATE bot_personas"), eq("Warm Welcome"), eq("HOSPITALITY"),
-                eq(1200), eq(30), eq(-1.0), eq(true), eq(true), eq("STOIC"), eq(-5L));
+                eq(1200), eq(30), eq(-1.0), eq(true), eq(true), eq("STOIC"), eq("RULE"), eq(null), eq(-5L));
     }
 
     @SuppressWarnings("unchecked")

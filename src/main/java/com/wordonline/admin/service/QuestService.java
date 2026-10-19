@@ -2,6 +2,7 @@ package com.wordonline.admin.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -11,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.wordonline.admin.dto.quest.QuestDto;
 import com.wordonline.admin.dto.quest.QuestRequestDto;
-import com.wordonline.admin.dto.quest.RewardParamDto;
+import com.wordonline.admin.dto.quest.QuestRewardDto;
 import com.wordonline.admin.entity.quest.Quest;
-import com.wordonline.admin.entity.quest.RewardParam;
+import com.wordonline.admin.entity.quest.QuestReward;
 import com.wordonline.admin.repository.quest.QuestRepository;
-import com.wordonline.admin.repository.quest.RewardParamRepository;
+import com.wordonline.admin.repository.quest.QuestRewardRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class QuestService {
 
     private final QuestRepository questRepository;
-    private final RewardParamRepository rewardParamRepository;
+    private final QuestRewardRepository questRewardRepository;
     private final Optional<SecondaryAdminDataService> secondaryAdminDataService;
 
     public boolean hasSecondaryDatabase() {
@@ -45,11 +46,11 @@ public class QuestService {
 
         return questRepository.findAll(Sort.by("id")).stream()
                 .map(quest -> {
-                    List<RewardParamDto> rewardParams = rewardParamRepository.findByQuestIdOrderByIdAsc(quest.getId())
+                    List<QuestRewardDto> rewards = questRewardRepository.findByQuestIdOrderByIdAsc(quest.getId())
                             .stream()
-                            .map(RewardParamDto::new)
+                            .map(QuestRewardDto::new)
                             .collect(Collectors.toList());
-                    return new QuestDto(quest, rewardParams);
+                    return new QuestDto(quest, rewards);
                 })
                 .collect(Collectors.toList());
     }
@@ -59,40 +60,25 @@ public class QuestService {
     }
 
     public Long createQuest(QuestRequestDto requestDto, boolean secondary) {
+        validate(requestDto);
         if (secondary) {
-            Long questId = secondaryAdminDataService.orElseThrow().createQuest(
-                    requestDto.progressChecker(),
-                    requestDto.requireValue(),
-                    requestDto.rewardGiver()
+            SecondaryAdminDataService secondaryService = secondaryAdminDataService.orElseThrow();
+            Long questId = secondaryService.createQuest(
+                    requestDto.conditionType(),
+                    requestDto.conditionTargetId(),
+                    requestDto.requireValue()
             );
-            if (requestDto.rewardParams() != null) {
-                for (RewardParamDto paramDto : requestDto.rewardParams()) {
-                    secondaryAdminDataService.orElseThrow().createRewardParam(questId, paramDto.name(), paramDto.value());
-                }
-            }
+            insertSecondaryRewards(secondaryService, questId, requestDto.rewards());
             return questId;
         }
 
-        Quest quest = new Quest(
+        Quest savedQuest = questRepository.save(new Quest(
                 null,
-                requestDto.progressChecker(),
-                requestDto.requireValue(),
-                requestDto.rewardGiver()
-        );
-        Quest savedQuest = questRepository.save(quest);
-
-        if (requestDto.rewardParams() != null) {
-            for (RewardParamDto paramDto : requestDto.rewardParams()) {
-                RewardParam rewardParam = new RewardParam(
-                        null,
-                        savedQuest,
-                        paramDto.name(),
-                        paramDto.value()
-                );
-                rewardParamRepository.save(rewardParam);
-            }
-        }
-
+                requestDto.conditionType(),
+                requestDto.conditionTargetId(),
+                requestDto.requireValue()
+        ));
+        saveRewards(savedQuest, requestDto.rewards());
         return savedQuest.getId();
     }
 
@@ -101,46 +87,33 @@ public class QuestService {
     }
 
     public void updateQuest(Long questId, QuestRequestDto requestDto, boolean secondary) {
+        validate(requestDto);
         if (secondary) {
-            secondaryAdminDataService.orElseThrow().updateQuest(
+            SecondaryAdminDataService secondaryService = secondaryAdminDataService.orElseThrow();
+            secondaryService.updateQuest(
                     questId,
-                    requestDto.progressChecker(),
-                    requestDto.requireValue(),
-                    requestDto.rewardGiver()
+                    requestDto.conditionType(),
+                    requestDto.conditionTargetId(),
+                    requestDto.requireValue()
             );
-            if (requestDto.rewardParams() != null) {
-                for (RewardParamDto paramDto : requestDto.rewardParams()) {
-                    secondaryAdminDataService.orElseThrow().createRewardParam(questId, paramDto.name(), paramDto.value());
-                }
-            }
+            secondaryService.deleteQuestRewards(questId);
+            insertSecondaryRewards(secondaryService, questId, requestDto.rewards());
             return;
         }
 
         Quest quest = questRepository.findById(questId)
                 .orElseThrow(() -> new IllegalArgumentException("Quest not found"));
 
-        Quest updatedQuest = new Quest(
+        Quest updatedQuest = questRepository.save(new Quest(
                 quest.getId(),
-                requestDto.progressChecker(),
-                requestDto.requireValue(),
-                requestDto.rewardGiver()
-        );
-        questRepository.save(updatedQuest);
+                requestDto.conditionType(),
+                requestDto.conditionTargetId(),
+                requestDto.requireValue()
+        ));
 
-        // Delete existing reward params and create new ones
-        rewardParamRepository.deleteByQuestId(questId);
-
-        if (requestDto.rewardParams() != null) {
-            for (RewardParamDto paramDto : requestDto.rewardParams()) {
-                RewardParam rewardParam = new RewardParam(
-                        null,
-                        updatedQuest,
-                        paramDto.name(),
-                        paramDto.value()
-                );
-                rewardParamRepository.save(rewardParam);
-            }
-        }
+        // The reward list is replaced as a whole.
+        questRewardRepository.deleteByQuestId(questId);
+        saveRewards(updatedQuest, requestDto.rewards());
     }
 
     public void deleteQuest(Long questId) {
@@ -152,6 +125,7 @@ public class QuestService {
             secondaryAdminDataService.orElseThrow().deleteQuest(questId);
             return;
         }
+        // quest_rewards rows go with the quest through the foreign key cascade.
         questRepository.deleteById(questId);
     }
 
@@ -173,35 +147,73 @@ public class QuestService {
             Quest existing = questsById.get(questDto.id());
             Quest quest = new Quest(
                     questDto.id(),
-                    questDto.progressChecker(),
-                    questDto.requireValue(),
-                    questDto.rewardGiver()
+                    questDto.conditionType(),
+                    questDto.conditionTargetId(),
+                    questDto.requireValue()
             );
 
             if (existing == null) {
                 created++;
                 changed.add("quest#" + questDto.id());
-            } else if (!java.util.Objects.equals(existing.getProgressChecker(), questDto.progressChecker())
-                    || !java.util.Objects.equals(existing.getRequireValue(), questDto.requireValue())
-                    || !java.util.Objects.equals(existing.getRewardGiver(), questDto.rewardGiver())) {
+            } else if (!Objects.equals(existing.getConditionType(), questDto.conditionType())
+                    || !Objects.equals(existing.getConditionTargetId(), questDto.conditionTargetId())
+                    || !Objects.equals(existing.getRequireValue(), questDto.requireValue())) {
                 updated++;
                 changed.add("quest#" + questDto.id());
             } else {
                 unchanged++;
             }
 
-            questRepository.save(quest);
-            rewardParamRepository.deleteByQuestId(questDto.id());
-            for (RewardParamDto rewardParam : questDto.rewardParams()) {
-                rewardParamRepository.save(new RewardParam(
-                        rewardParam.id(),
-                        quest,
-                        rewardParam.name(),
-                        rewardParam.value()
-                ));
-            }
+            Quest saved = questRepository.save(quest);
+            questRewardRepository.deleteByQuestId(questDto.id());
+            saveRewards(saved, questDto.rewards());
         }
 
         return new SyncResult(created, updated, unchanged, changed);
+    }
+
+    private void saveRewards(Quest quest, List<QuestRewardDto> rewards) {
+        if (rewards == null) {
+            return;
+        }
+        for (QuestRewardDto reward : rewards) {
+            questRewardRepository.save(new QuestReward(
+                    null,
+                    quest,
+                    reward.rewardType(),
+                    reward.targetId(),
+                    reward.amount()
+            ));
+        }
+    }
+
+    private void insertSecondaryRewards(SecondaryAdminDataService secondaryService, Long questId,
+                                        List<QuestRewardDto> rewards) {
+        if (rewards == null) {
+            return;
+        }
+        for (QuestRewardDto reward : rewards) {
+            secondaryService.createQuestReward(questId, reward.rewardType(), reward.targetId(), reward.amount());
+        }
+    }
+
+    private void validate(QuestRequestDto requestDto) {
+        if (requestDto.conditionType() == null || requestDto.conditionType().isBlank()) {
+            throw new IllegalArgumentException("conditionType is required");
+        }
+        if (requestDto.requireValue() == null) {
+            throw new IllegalArgumentException("requireValue is required");
+        }
+        if (requestDto.rewards() == null) {
+            return;
+        }
+        for (QuestRewardDto reward : requestDto.rewards()) {
+            if (reward.rewardType() == null || reward.rewardType().isBlank()) {
+                throw new IllegalArgumentException("rewardType is required");
+            }
+            if (reward.amount() == null || reward.amount() <= 0) {
+                throw new IllegalArgumentException("reward amount must be greater than 0");
+            }
+        }
     }
 }
