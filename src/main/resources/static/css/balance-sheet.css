@@ -1,0 +1,16 @@
+.balance-toolbar { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin: 1rem 0; }
+.balance-toolbar label { display: flex; gap: .35rem; align-items: center; margin: 0; }
+.balance-scroll { overflow: auto; max-height: 68vh; margin: 1rem 0; }
+#balance-table { border-collapse: separate; border-spacing: 0; }
+#balance-table th, #balance-table td { min-width: 155px; padding: .5rem; vertical-align: top; }
+#balance-table thead th { position: sticky; top: 0; z-index: 2; background: #211c18; color: #f4ede5; }
+#balance-table .object-name { position: sticky; left: 0; min-width: 220px; background: #211c18; color: #f4ede5; z-index: 1; }
+#balance-table thead .object-name { z-index: 3; }
+#balance-table input[type=number] { width: 110px; }
+#balance-table small { display: block; max-width: 240px; overflow-wrap: anywhere; }
+#balance-table .different { box-shadow: inset 3px 0 #6fa9d8; }
+#balance-table .modified { background: #57421e; color: #fff; }
+#balance-table .reference { display: block; font-size: .8rem; }
+#balance-table button { white-space: normal; }
+#sheet-changes li { margin: .5rem 0; }
+.balance-empty { padding: 2rem; }
