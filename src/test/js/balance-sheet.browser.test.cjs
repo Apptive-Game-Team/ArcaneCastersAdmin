@@ -1,0 +1,85 @@
+const {test} = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const {chromium} = require('playwright');
+test('스프레드시트 필터, 재계산, 참조, 저장 실패 및 보기 복원을 검증한다', async () => {
+    const browser = await chromium.launch({headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge'});
+    try {
+        const page = await browser.newPage({viewport: {width: 1440, height: 960}});
+        const errors = []; page.on('pageerror', e => errors.push(e.message));
+        const primary = {objects: {shooter: {values: {damage: 20, attack_interval: 2, hp: 100, quantity: 3, mana_cost: 5, zero: 0, unused: null}, tags: []}, bean_shooter: {values: {damage: 130, quantity: 1, mana_cost: 10, attack_interval: 2}, tags: ['unit']}, bean: {values: {speed: 7}, tags: []}}, magics: [{name: 'shooter', kind: 'Spawn', objectName: 'shooter'}]};
+        const secondary = structuredClone(primary);
+        secondary.objects.dev_only = {values: {damage: 40, attack_interval: 2, quantity: 2, hp: 80, mana_cost: 10}, tags: []};
+        secondary.magics.push({name: 'dev_only', kind: 'Spawn', objectName: 'dev_only'});
+        let html = fs.readFileSync('src/main/resources/templates/admin-spreadsheet.html', 'utf8');
+        html = html.replace(/<script[\s\S]*?<\/script>/g, '').replace('</head>', '<style>' + fs.readFileSync('src/main/resources/static/css/balance-sheet.css', 'utf8') + '</style></head>');
+        await page.route('http://balance.test/', route => route.fulfill({contentType: 'text/html', body: html}));
+        async function open() {
+            await page.goto('http://balance.test/');
+            await page.evaluate(data => window.balanceSheetData = data, {primary, secondary, secondaryEnabled: true});
+            await page.addScriptTag({path: 'src/main/resources/static/js/balance-model.js'});
+            await page.addScriptTag({path: 'src/main/resources/static/js/balance-sheet.js'});
+        }
+        await open();
+        await page.selectOption('#sheet-kind', 'unit');
+        assert.match(await page.locator('#balance-table tbody').innerText(), /dev_only/);
+        assert.doesNotMatch(await page.locator('#balance-table thead').innerText(), /unused/);
+        assert.match(await page.locator('#balance-table thead').innerText(), /zero/);
+        await page.selectOption('#sheet-basis', 'primary');
+        assert.doesNotMatch(await page.locator('#balance-table tbody').innerText(), /dev_only/);
+        await page.fill('#sheet-search', 'shooter');
+        await page.fill('input[data-source="shooter"][data-parameter="quantity"][data-db="secondary"]', '4');
+        assert.match(await page.locator('td[data-name="shooter"][data-metric="total_dps"][data-db="secondary"]').innerText(), /40/);
+        await page.locator('#sheet-search').focus();
+        assert.match(await page.locator('#sheet-change-count').innerText(), /1개/);
+        await page.fill('#sheet-search', 'bean_shooter');
+        await page.locator('#balance-table button').filter({hasText: '← bean.speed'}).first().click();
+        assert.equal(await page.inputValue('#sheet-search'), 'bean');
+        await page.fill('input[data-source="bean"][data-parameter="speed"][data-db="primary"]', '8');
+        await page.locator('#sheet-search').focus();
+        assert.match(await page.locator('#sheet-changes').textContent(), /참조 영향: bean_shooter/);
+        await page.route('**/api/admin/spread-sheets/game-objects/by-name', route => route.fulfill({status: 500, body: 'fixture failure'}));
+        page.on('dialog', d => d.accept());
+        await page.click('#sheet-save');
+        await page.waitForFunction(() => document.getElementById('sheet-status').textContent.includes('저장하지 못했습니다'));
+        assert.equal(await page.locator('input[data-source="bean"][data-parameter="speed"]').isEnabled(), true);
+        assert.match(await page.locator('#sheet-change-count').innerText(), /2개/);
+        await page.click('#sheet-undo');
+        assert.match(await page.locator('#sheet-change-count').innerText(), /0개/);
+        await page.fill('#sheet-search', ''); await page.selectOption('#sheet-kind', 'unit');
+        await page.selectOption('#sheet-basis', 'either'); await page.selectOption('#sheet-view', 'both');
+        await page.locator('input[aria-label="dev_only 비교 선택"]').check();
+        await page.check('#sheet-selected');
+        assert.equal(await page.locator('#balance-table tbody tr').count(), 1);
+        await open();
+        assert.equal(await page.locator('#sheet-selected').isChecked(), true);
+        assert.match(await page.locator('#balance-table tbody').innerText(), /dev_only/);
+        await page.uncheck('#sheet-selected');
+        await page.check('#sheet-diff-rows');
+        assert.equal(await page.locator('#balance-table tbody tr').count(), 1);
+        await page.uncheck('#sheet-diff-rows');
+        await page.selectOption('#sheet-sort', 'total_dps');
+        await page.selectOption('#sheet-sort-db', 'secondary');
+        assert.match(await page.locator('#balance-table tbody tr').first().innerText(), /bean_shooter/);
+        await page.locator('#sheet-columns').evaluate(e => e.parentElement.open = true);
+        await page.locator('#sheet-columns label').filter({hasText: '공격'}).locator('input').uncheck();
+        assert.doesNotMatch(await page.locator('#balance-table thead').innerText(), /공격 주기/);
+        await page.fill('#sheet-search', 'shooter');
+        await page.fill('input[data-source="shooter"][data-parameter="quantity"][data-db="secondary"]', '4');
+        await page.locator('#sheet-search').focus();
+        await page.unroute('**/api/admin/spread-sheets/game-objects/by-name');
+        let submitted;
+        await page.route('**/api/admin/spread-sheets/game-objects/by-name', route => {
+            submitted = route.request().postDataJSON(); return route.fulfill({status: 200, body: 'saved'});
+        });
+        await page.click('#sheet-save');
+        await page.waitForURL('http://balance.test/');
+        await page.waitForFunction(() => !document.getElementById('balance-table').tBodies[0].children.length);
+        assert.deepEqual(submitted, [{gameObjectName: 'shooter', parameterName: 'quantity', value: 4, db: 'secondary'}]);
+        await open();
+        assert.deepEqual(errors, []);
+        await page.screenshot({path: 'build/balance-sheet-preview.png', fullPage: true});
+    } finally { await browser.close(); }
+});
+
+

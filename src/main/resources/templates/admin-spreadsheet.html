@@ -1,213 +1,42 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout}">
-
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
 <head>
-    <title>Admin - Game Object Comparison</title>
-    <style>
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        .comparison-table th,
-        .comparison-table td {
-            min-width: 110px;
-            white-space: nowrap;
-        }
-
-        .comparison-table .name-column {
-            background: #151210;
-            left: 0;
-            min-width: 220px;
-            position: sticky;
-            z-index: 2;
-        }
-
-        .comparison-table thead .name-column {
-            background: #0a0908;
-            z-index: 3;
-        }
-
-        .missing-db {
-            color: #736861;
-            font-size: 0.8rem;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>밸런스 스프레드시트</title>
+    <link rel="stylesheet" th:href="@{/css/balance-sheet.css}">
 </head>
-
 <body>
 <div layout:fragment="content">
-    <div class="container-fluid">
-        <h1>Game Object Deploy / Dev Comparison</h1>
-
-        <div class="mb-3">
-            <button type="button" id="sync-spreadsheet-to-secondary"
-                    class="btn btn-outline-secondary"
-                    th:disabled="${!secondaryDatabaseEnabled}">Deploy -> Dev</button>
-            <button type="button" id="sync-spreadsheet-to-primary"
-                    class="btn btn-outline-secondary ml-2"
-                    th:disabled="${!secondaryDatabaseEnabled}">Dev -> Deploy</button>
-        </div>
-
-        <form class="form mb-3">
-            <div class="form-group">
-                <label for="tags-input">Filter by Deploy Tags:</label>
-                <input type="text" class="form-control" id="tags-input" name="tags"
-                       th:value="${param.tags}" placeholder="e.g., tag1,tag2">
-            </div>
-            <div class="form-group">
-                <label for="spreadsheet-search">Search:</label>
-                <input type="text" class="form-control" id="spreadsheet-search"
-                       placeholder="Search by game object, parameter, or value">
-            </div>
-            <div class="form-group mt-2">
-                <div class="form-check form-check-inline" th:each="tag : ${allTags}">
-                    <input class="form-check-input tag-checkbox" type="checkbox"
-                           th:value="${tag.name}" th:id="|tag_${tag.id}|"
-                           th:checked="${param.tags != null && #strings.contains(param.tags, tag.name)}">
-                    <label class="form-check-label" th:for="|tag_${tag.id}|"
-                           th:text="${tag.name}"></label>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary mt-2">Filter</button>
-        </form>
-
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered comparison-table">
-                <thead class="thead-dark">
-                <tr>
-                    <th class="name-column" rowspan="2">Game Object</th>
-                    <th:block th:each="parameterName : ${parameterNames}">
-                        <th colspan="2" th:text="${parameterName}"></th>
-                    </th:block>
-                </tr>
-                <tr>
-                    <th:block th:each="parameterName : ${parameterNames}">
-                        <th>Deploy</th>
-                        <th>Dev</th>
-                    </th:block>
-                </tr>
-                </thead>
-                <tbody id="spreadsheet-table-body">
-                <tr th:each="gameObject : ${gameObjects}">
-                    <td class="name-column">
-                        <strong th:text="${gameObject.name}"></strong>
-                        <div class="missing-db" th:if="${!gameObject.primaryPresent}">Deploy: N/A</div>
-                        <div class="missing-db" th:if="${!gameObject.secondaryPresent}">Dev: N/A</div>
-                    </td>
-                    <th:block th:each="parameter : ${gameObject.parameters}">
-                        <td>
-                            <input type="number" step="any"
-                                   class="form-control editable-param"
-                                   data-db="primary"
-                                   th:attr="data-game-object-name=${gameObject.name},
-                                            data-param-name=${parameter.name},
-                                            data-initial-value=${parameter.primaryValue}"
-                                   th:value="${parameter.primaryValue}"
-                                   placeholder="N/A">
-                        </td>
-                        <td>
-                            <input type="number" step="any"
-                                   class="form-control editable-param"
-                                   data-db="secondary"
-                                   th:disabled="${!secondaryDatabaseEnabled}"
-                                   th:attr="data-game-object-name=${gameObject.name},
-                                            data-param-name=${parameter.name},
-                                            data-initial-value=${parameter.secondaryValue}"
-                                   th:value="${parameter.secondaryValue}"
-                                   placeholder="N/A">
-                        </td>
-                    </th:block>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <button id="save-changes" class="btn btn-success">Save Changes</button>
+    <h1>밸런스 스프레드시트</h1>
+    <p>총 DPS와 총 HP는 소환 수를 반영합니다. DPS는 모든 개체가 동시에 단일 대상을 공격하는 기본 공격 기준이며, 광역·연쇄·지속 피해는 별도로 확인하세요.</p>
+    <div id="balance-toolbar" class="balance-toolbar">
+        <label>검색 <input id="sheet-search" type="search" placeholder="객체 이름 또는 parameter"></label>
+        <label>종류 <select id="sheet-kind"><option value="">전체</option><option value="unit">유닛</option><option value="building">건물</option><option value="projectile">투사체</option><option value="effect">효과</option><option value="other">기타</option></select></label>
+        <label>태그 (모두 일치) <input id="sheet-tags" placeholder="쉼표로 구분" list="sheet-tag-list"><datalist id="sheet-tag-list"></datalist></label>
+        <label>필터 기준 <select id="sheet-basis"><option value="either">Deploy 또는 Dev</option><option value="primary">Deploy</option><option value="secondary">Dev</option></select></label>
+        <label>표시 <select id="sheet-view"><option value="both">Deploy / Dev</option><option value="secondary">Dev</option><option value="primary">Deploy</option></select></label>
+        <label>정렬 기준 DB <select id="sheet-sort-db"><option value="secondary">Dev</option><option value="primary">Deploy</option></select></label>
+        <label>정렬 <select id="sheet-sort"></select></label>
+        <label><input id="sheet-desc" type="checkbox" checked> 내림차순</label>
+        <label><input id="sheet-empty" type="checkbox" checked> 모두 N/A인 열 숨김</label>
+        <label><input id="sheet-diff-rows" type="checkbox"> 차이 있는 행만</label>
+        <label><input id="sheet-diff-cols" type="checkbox"> 차이 있는 열만</label>
+        <label><input id="sheet-selected" type="checkbox"> 선택한 객체만</label>
+        <button type="button" id="sheet-reset">보기 초기화</button>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tagsInput = document.getElementById('tags-input');
-            const checkboxes = document.querySelectorAll('.tag-checkbox');
-            const spreadsheetSearch = document.getElementById('spreadsheet-search');
-
-            function normalizedValue(input) {
-                return input.value.trim();
-            }
-
-            function getRowSearchText(row) {
-                const inputText = Array.from(row.querySelectorAll('input'))
-                    .map(input => input.value || '')
-                    .join(' ');
-                const parameterNames = Array.from(row.querySelectorAll('.editable-param'))
-                    .map(input => input.dataset.paramName)
-                    .join(' ');
-                return `${row.innerText} ${inputText} ${parameterNames}`.toLowerCase();
-            }
-
-            spreadsheetSearch.addEventListener('input', function(event) {
-                const query = event.target.value.trim().toLowerCase();
-                document.querySelectorAll('#spreadsheet-table-body tr').forEach(row => {
-                    row.style.display = getRowSearchText(row).includes(query) ? '' : 'none';
-                });
-            });
-
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    tagsInput.value = Array.from(checkboxes)
-                        .filter(item => item.checked)
-                        .map(item => item.value)
-                        .join(',');
-                });
-            });
-
-            document.getElementById('save-changes').addEventListener('click', async function() {
-                const updates = Array.from(document.querySelectorAll('.editable-param'))
-                    .filter(input => normalizedValue(input) !== (input.dataset.initialValue || ''))
-                    .map(input => ({
-                        gameObjectName: input.dataset.gameObjectName,
-                        parameterName: input.dataset.paramName,
-                        value: normalizedValue(input) === '' ? null : Number(input.value),
-                        db: input.dataset.db
-                    }));
-
-                if (updates.length === 0) {
-                    alert('No changes to save.');
-                    return;
-                }
-
-                const response = await fetch('/api/admin/spread-sheets/game-objects/by-name', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(updates)
-                });
-                const message = await response.text();
-                alert(message || (response.ok ? 'Changes saved.' : 'Save failed.'));
-                if (response.ok) {
-                    window.location.reload();
-                }
-            });
-
-            async function postSync(url, message) {
-                if (!confirm(message)) {
-                    return;
-                }
-                const response = await fetch(url, {method: 'POST'});
-                alert(await response.text());
-                if (response.ok) {
-                    window.location.reload();
-                }
-            }
-
-            document.getElementById('sync-spreadsheet-to-secondary').addEventListener('click', function() {
-                postSync('/api/admin/spread-sheets/sync-to-secondary', 'Sync Deploy values to Dev?');
-            });
-            document.getElementById('sync-spreadsheet-to-primary').addEventListener('click', function() {
-                postSync('/api/admin/spread-sheets/sync-to-primary', 'Sync Dev values to Deploy?');
-            });
-        });
-    </script>
+    <details><summary>열 그룹과 순서</summary><div id="sheet-columns" class="balance-toolbar"></div></details>
+    <p id="sheet-status" role="status" aria-live="polite"></p>
+    <div class="balance-scroll"><table id="balance-table" class="table table-bordered"><thead></thead><tbody></tbody></table></div>
+    <details id="sheet-change-panel"><summary id="sheet-change-count">변경 0개</summary><ul id="sheet-changes"></ul></details>
+    <div class="balance-toolbar">
+        <button type="button" id="sheet-save" class="btn btn-success">변경 저장</button>
+        <button type="button" id="sheet-undo">전체 되돌리기</button>
+        <button type="button" id="sheet-to-dev" th:disabled="${!secondaryDatabaseEnabled}">Deploy → Dev 전체 복사</button>
+        <button type="button" id="sheet-to-deploy" th:disabled="${!secondaryDatabaseEnabled}">Dev → Deploy 전체 복사</button>
+    </div>
+    <script th:inline="javascript">window.balanceSheetData = /*[[${balanceSheet}]]*/ null;</script>
+    <script th:src="@{/js/balance-model.js}"></script>
+    <script th:src="@{/js/balance-sheet.js}"></script>
 </div>
 </body>
 </html>
