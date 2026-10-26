@@ -6,9 +6,9 @@
     const controls = ['search', 'kind', 'tags', 'basis', 'view', 'sort-db', 'sort', 'desc', 'empty', 'diff-rows', 'diff-cols', 'selected'];
     const selected = new Set(), collapsed = new Set(['내부 설정']);
     const names = [...new Set([...Object.keys(current.primary.objects), ...Object.keys(current.secondary.objects)])].sort();
-    const priority = ['summon_count', 'mana_cost', 'total_dps', 'dps_per_mana', 'total_hp', 'hp_per_mana', 'individual_dps', 'quantity', 'hp', 'damage', 'attack_interval', 'attack_range', 'speed'];
+    const priority = ['summon_count', 'mana_cost', 'total_dps', 'dps_per_mana', 'total_hp', 'hp_per_mana', 'individual_dps', 'attack_area_radius', 'attack_area', 'attack_range', 'effect_radius', 'beam_width', 'attack_area_width', 'attack_area_length', 'quantity', 'hp', 'damage', 'attack_interval', 'attack_range', 'speed'];
     const rawKeys = new Set(names.flatMap(name => ['primary', 'secondary'].flatMap(db => Object.keys(current[db].objects[name]?.values || {}))));
-    Object.values(M.references).forEach(refs => Object.keys(refs).forEach(key => rawKeys.add(key)));
+    ['primary', 'secondary'].forEach(db => Object.values(M.referenceMap(current[db])).forEach(refs => Object.keys(refs).forEach(key => rawKeys.add(key))));
     let columns = [...new Set([...priority, ...[...rawKeys].sort()])];
     let saving = false;
     const fmt = n => n === null ? 'N/A' : new Intl.NumberFormat('ko', {maximumFractionDigits: 4}).format(n);
@@ -115,16 +115,17 @@
             const row = element('tr'), title = element('th', undefined, 'object-name'); title.scope = 'row';
             const select = document.createElement('input'); select.type = 'checkbox'; select.checked = selected.has(name); select.setAttribute('aria-label', `${name} 비교 선택`);
             select.addEventListener('change', () => { select.checked ? selected.add(name) : selected.delete(name); render(); });
-            title.append(select, document.createTextNode(' ' + name));
+            title.append(select, document.createTextNode(' ' + name), button('참조 등록', () => openReference(name, setting('view') === 'primary' ? 'primary' : (current.secondaryEnabled ? 'secondary' : 'primary'))));
             ['primary', 'secondary'].forEach(db => title.append(element('small', `${db === 'primary' ? 'Deploy' : 'Dev'}: ${current[db].objects[name] ? (current[db].objects[name].tags.join(', ') || M.kind(current[db], name)) : '객체 없음'}`)));
             row.append(title);
             for (const key of visibleColumns) for (const db of dbs) {
                 const result = M.calculate(current[db], name, key), before = M.calculate(original[db], name, key).value;
                 const cell = element('td'); if (differs(name, key)) cell.classList.add('different');
                 if (result.value !== before) cell.classList.add('modified');
-                const derived = M.metrics.includes(key), reference = !derived && (result.source !== name || result.parameter !== key);
+                const derived = M.metrics.includes(key), reference = !derived && result.referenced;
                 const present = Boolean(current[db].objects[name]);
-                if (derived || reference || !present || (db === 'secondary' && !current.secondaryEnabled)) {
+                const unresolvedArea = ['attack_area_radius', 'attack_area_width', 'attack_area_length'].includes(key) && !reference && !Object.hasOwn(current[db].objects[name]?.values || {}, key);
+                if (derived || reference || unresolvedArea || !present || (db === 'secondary' && !current.secondaryEnabled)) {
                     cell.append(element('span', fmt(result.value)));
                 } else {
                     const input = document.createElement('input'); input.type = 'number'; input.step = 'any'; input.value = result.value ?? ''; input.placeholder = 'N/A';
@@ -137,6 +138,7 @@
                     });
                     input.addEventListener('change', () => { if (input.checkValidity()) render(); }); cell.append(input);
                 }
+                if (unresolvedArea && present) cell.append(button('범위 참조 등록', () => openReference(name, db, key)));
                 if (reference) cell.append(button(`← ${result.reason}`, () => jump(db, result.source, result.parameter)));
                 if (derived || reference) {
                     cell.dataset.metric = key; cell.dataset.name = name; cell.dataset.db = db;
@@ -179,6 +181,57 @@
         }
         $('sheet-save').disabled = saving || !updates.length;
     }
+    function referenceParameters(db, name) {
+        return [...new Set([...Object.keys(current[db].objects[name]?.values || {}), ...Object.keys(M.referenceMap(current[db])[name] || {})])].sort();
+    }
+    function options(select, values) {
+        const old = select.value; select.replaceChildren();
+        values.forEach(value => { const option = element('option', value); option.value = value; select.append(option); });
+        if (values.includes(old)) select.value = old;
+    }
+    function referenceTargets() { options($('ref-target-parameter'), referenceParameters($('ref-db').value, $('ref-target').value)); }
+    function openReference(name, db, key, target) {
+        $('sheet-reference-panel').open = true; $('ref-db').value = db; referenceControls(); $('ref-object').value = name;
+        $('ref-parameter').value = key || 'attack_area_radius';
+        if (target) { $('ref-target').value = target.objectName; referenceTargets(); $('ref-target-parameter').value = target.parameterName; $('ref-multiplier').value = target.multiplier; }
+        else { $('ref-multiplier').value = 1; }
+        $('sheet-reference-panel').scrollIntoView({block: 'nearest'});
+    }
+    function referenceControls() {
+        const db = $('ref-db').value, objectNames = Object.keys(current[db].objects).sort();
+        options($('ref-object'), objectNames); options($('ref-target'), objectNames); referenceTargets();
+        const list = $('ref-list'); list.replaceChildren();
+        for (const [name, refs] of Object.entries(M.referenceMap(current[db]))) for (const [key, target] of Object.entries(refs)) {
+            const item = element('li', name + '.' + key + ' ← ' + target.objectName + '.' + target.parameterName + ' × ' + target.multiplier + ' ');
+            item.append(button('수정', () => openReference(name, db, key, target)), button('삭제', () => saveReference({db, objectName: name, parameterName: key, remove: true}))); list.append(item);
+        }
+        const suggestions = $('ref-parameters'); suggestions.replaceChildren();
+        [...new Set([...columns, 'attack_area_radius', 'attack_area_width', 'attack_area_length'])].filter(k => !M.metrics.includes(k)).forEach(k => { const option = element('option'); option.value = k; suggestions.append(option); });
+    }
+    async function saveReference(change) {
+        if (saving) return;
+        if (!change.remove && (!/^[a-z][a-z0-9_]{0,127}$/.test(change.parameterName) || !change.targetParameterName || !Number.isFinite(change.multiplier) || change.multiplier <= 0)) {
+            $('ref-status').textContent = '표시 parameter 이름, 원본 parameter와 양수 배율을 확인하세요.'; return;
+        }
+        const action = change.remove ? '삭제' : '저장';
+        if (!confirm((change.db === 'primary' ? 'Deploy' : 'Dev') + '의 ' + change.objectName + '.' + change.parameterName + ' 참조를 ' + action + '할까요? 시트 계산에 즉시 반영됩니다. 숫자 변경은 별도로 저장합니다.')) return;
+        saving = true; $('ref-save').disabled = true;
+        try {
+            const response = await post('/api/admin/spread-sheets/references', change);
+            const refs = await response.json();
+            current[change.db].references = refs; original[change.db].references = structuredClone(refs);
+            Object.values(refs).forEach(entries => Object.keys(entries).forEach(key => { if (!columns.includes(key)) { columns.push(key); const option = element('option', M.labels[key] || key); option.value = key; field('sort').append(option); } }));
+            saving = false; referenceControls(); columnControls(); render();
+            $('ref-status').textContent = '참조를 ' + action + '했습니다. 전투 코드는 변경되지 않았습니다.';
+        } catch (error) {
+            saving = false; $('ref-status').textContent = '참조를 ' + action + '하지 못했습니다: ' + error.message;
+        } finally { $('ref-save').disabled = false; }
+    }
+    $('ref-db').addEventListener('change', referenceControls);
+    $('ref-target').addEventListener('change', referenceTargets);
+    $('ref-save').addEventListener('click', () => saveReference({db: $('ref-db').value, objectName: $('ref-object').value,
+        parameterName: $('ref-parameter').value.trim(), targetObjectName: $('ref-target').value,
+        targetParameterName: $('ref-target-parameter').value, multiplier: Number($('ref-multiplier').value), remove: false}));
     controls.forEach(k => field(k).addEventListener(k === 'search' || k === 'tags' ? 'input' : 'change', render));
     $('sheet-reset').addEventListener('click', () => {
         if (saving) return;
@@ -193,6 +246,7 @@
         if (csrf && csrfHeader) headers[csrfHeader.content] = csrf.content;
         const response = await fetch(url, {method: 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body)});
         if (!response.ok) throw new Error((await response.text()) || `저장 실패 (${response.status})`);
+        return response;
     }
     $('sheet-save').addEventListener('click', async () => {
         if (saving) return;
@@ -215,5 +269,5 @@
     }
     $('sheet-to-dev').addEventListener('click', () => sync(true)); $('sheet-to-deploy').addEventListener('click', () => sync(false));
     window.onbeforeunload = e => { if (changes().length) { e.preventDefault(); e.returnValue = ''; } };
-    columnControls(); render();
+    referenceControls(); columnControls(); render();
 })();

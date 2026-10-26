@@ -21,12 +21,29 @@
 수량·마나는 소환 마법 이름의 객체에서 읽습니다. 원본 수량과 소환 수를 따로 보여줍니다.
 참조 셀은 읽기 전용이며 원본 링크에서 수정합니다. 계산 근거에는 원본 parameter 이름이 표시됩니다.
 
-`static/js/balance-model.js`의 `references`는 확인된 교차 객체 참조를 정의합니다.
-현재 Bean Shooter 투사체 속도·반지름, Lightning Cloud 공격력·효과 반지름,
-Water Slime 사거리, Grass Generator 잎 영역 반지름을 포함합니다.
-Rust의 각 PrefabInitializer에서 확인했으며 Bean Shooter 피해는 자체 damage를 사용합니다.
-전투 코드에서 참조가 바뀌면 이 정의와 회귀 테스트도 함께 수정해야 합니다.
-등록하지 않은 특수 공격의 관계를 값 유무나 이름으로 추측하지 않습니다.
+## 공격 범위와 참조 등록
+
+광역 피해 반경은 attack_area_radius 열로 표시합니다. 원형 공격은 π × 반경²으로 면적을
+표시하며, 이 면적은 대상 수나 DPS 배율이 아닙니다. 사거리, 충돌 반지름, 효과 반경을
+자동으로 광역 피해 반경으로 간주하지 않습니다. 폭·길이와 빔 폭은 별도 범위 항목입니다.
+
+화면의 parameter 참조 등록·관리에서 DB, 표시 객체·parameter, 원본 객체·parameter,
+배율을 선택해 저장합니다. Fire Spirit의 광역 피해 반경은 attack_range × 0.5처럼
+표현할 수 있습니다. 값 자체는 원본 링크로 이동해 수정합니다.
+
+참조는 balance_parameter_references에 Deploy/Dev별로 저장합니다. 새로고침과 다른 관리자
+세션에서도 유지되며, 브라우저 보기 설정과 분리됩니다. 참조 등록·수정·삭제는 즉시
+저장하고, 숫자 편집은 기존 변경 저장 버튼으로 별도 저장합니다. 참조 삭제 후에는
+원본 값이나 마법 객체 별칭을 다시 사용합니다. 참조를 등록해도 전투 코드가 바뀌지는 않습니다.
+
+서버는 존재하지 않는 원본, 계산 지표를 원본으로 쓰는 설정, 0 이하·무한대 배율,
+자기 참조·다단계 순환·마법 객체 별칭을 통한 순환을 거부합니다. 다른 참조가 의존하는
+가상 항목을 삭제해 원본이 사라지는 경우도 거부합니다. 저장 중 테이블 잠금으로
+두 관리자의 동시 변경이 순환을 만드는 것을 막습니다.
+
+Database V050_20261026__add_balance_parameter_references.sql을 먼저 적용해야 합니다.
+초기 참조는 기존 교차 객체 참조와 Lightning Cloud, Magma Spirit, Firework Tower,
+Crater Carrier, Fire Spirit의 확인된 광역 반경을 포함합니다. 이후 변경은 시트에서 관리합니다.
 
 ## 편집과 보기
 
@@ -47,3 +64,9 @@ Java 21에서 `./gradlew test`를 실행합니다.
 `node --test --test-timeout=90000 src/test/js/balance-sheet.browser.test.cjs`로 실행하며
 Chrome을 사용할 경우 `BROWSER_CHANNEL=chrome`을 지정합니다.
 브라우저 테스트는 가상 호스트와 fixture를 사용하고 실제 DB를 수정하지 않습니다.
+
+실제 PostgreSQL 저장·재조회·동시 순환 방지 테스트는 임시 DB에만 실행하세요.
+BALANCE_TEST_DB_URL, BALANCE_TEST_DB_USER, BALANCE_TEST_MIGRATION(위 V050 파일의 절대 경로)을
+설정하고 ./gradlew test를 실행하면 BalanceReferenceJdbcTest가 함께 실행됩니다.
+이 테스트는 balance_primary와 balance_secondary 스키마 및 테스트 데이터를 생성하므로
+비어 있는 전용 테스트 DB가 필요합니다. 환경변수가 없으면 이 테스트만 건너뜁니다.

@@ -9,7 +9,7 @@ function snapshot() {
         bean: {values: {damage: 999, speed: 7}, tags: []},
         lightning_cloud: {values: {quantity: 10, attack_interval: 2}, tags: []},
         lightning_drop: {values: {damage: 50}, tags: []}
-    }, magics: [{name: 'swarm', kind: 'Spawn', objectName: 'unit'}, {name: 'lightning_cloud', kind: 'Drop', objectName: 'lightning_cloud'}]};
+    }, references: {bean_shooter: {projectile_speed: {objectName: 'bean', parameterName: 'speed', multiplier: 1}}, lightning_cloud: {damage: {objectName: 'lightning_drop', parameterName: 'damage', multiplier: 1}}}, magics: [{name: 'swarm', kind: 'Spawn', objectName: 'unit'}, {name: 'lightning_cloud', kind: 'Drop', objectName: 'lightning_cloud'}]};
 }
 test('군집 소환의 개체 능력치와 소환 수 및 마나 출처를 분리한다', () => {
     const s = snapshot();
@@ -50,4 +50,26 @@ test('태그 없이도 Spawn 유닛을 분류하고 태그는 완전 일치한�
     dev.objects.swarm.tags = ['unit-elite'];
     assert.equal(M.matches(dev, 'swarm', 'unit', ['unit']), false);
     assert.equal(M.matches(dev, 'swarm', 'unit', ['unit-elite']), true);
+});
+
+test('저장된 다단계 참조와 배율을 따라 광역 반경·면적을 계산한다', () => {
+    const s = snapshot();
+    s.references = {swarm: {attack_area_radius: {objectName: 'unit', parameterName: 'range_alias', multiplier: 0.5}},
+        unit: {range_alias: {objectName: 'bean', parameterName: 'speed', multiplier: 2}}};
+    assert.equal(M.value(s, 'swarm', 'attack_area_radius').value, 7);
+    assert.equal(M.calculate(s, 'swarm', 'attack_area').value, Math.PI * 49);
+    assert.equal(M.value(s, 'swarm', 'attack_area_radius').source, 'bean');
+    s.references = {};
+    assert.equal(M.value(s, 'bean_shooter', 'projectile_speed').value, null);
+    assert.equal(M.calculate(s, 'swarm', 'attack_area').value, null);
+});
+test('순환 참조와 존재하지 않는 원본은 N/A로 표시한다', () => {
+    const s = snapshot();
+    s.references = {unit: {damage: {objectName: 'swarm', parameterName: 'damage', multiplier: 1}}};
+    assert.equal(M.value(s, 'swarm', 'damage').value, null);
+    assert.match(M.value(s, 'swarm', 'damage').reason, /순환/);
+    s.references.unit.damage.objectName = 'missing';
+    assert.equal(M.calculate(s, 'swarm', 'total_dps').value, null);
+    s.objects.bean.tags = ['TYPE_Unit'];
+    assert.equal(M.kind(s, 'bean'), 'unit');
 });

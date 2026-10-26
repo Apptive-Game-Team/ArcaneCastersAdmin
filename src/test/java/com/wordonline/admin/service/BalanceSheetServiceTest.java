@@ -16,6 +16,7 @@ class BalanceSheetServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         doAnswer(invocation -> {
             String sql = invocation.getArgument(0);
+            if (sql.contains("balance_parameter_references")) return null;
             RowCallbackHandler callback = invocation.getArgument(1);
             ResultSet rs = mock(ResultSet.class);
             when(rs.getString("name")).thenReturn(name);

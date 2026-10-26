@@ -19,7 +19,13 @@ public class BalanceSheetService {
 
     public record ObjectData(Map<String, Double> values, List<String> tags) {}
     public record MagicData(String name, String kind, String objectName) {}
-    public record Snapshot(Map<String, ObjectData> objects, List<MagicData> magics) {}
+    public record ReferenceTarget(String objectName, String parameterName, double multiplier) {}
+    public record Snapshot(Map<String, ObjectData> objects, List<MagicData> magics,
+                           Map<String, Map<String, ReferenceTarget>> references) {
+        public Snapshot(Map<String, ObjectData> objects, List<MagicData> magics) {
+            this(objects, magics, new TreeMap<>());
+        }
+    }
     public record Sheet(Snapshot primary, Snapshot secondary, boolean secondaryEnabled) {}
 
     public Sheet load() {
@@ -52,6 +58,16 @@ public class BalanceSheetService {
                 order by m.name
                 """, (rs, index) -> new MagicData(rs.getString("name"), rs.getString("cast_kind"),
                 rs.getString("object_name")));
-        return new Snapshot(objects, magics);
+        Map<String, Map<String, ReferenceTarget>> references = new TreeMap<>();
+        jdbc.query("""
+                select g.name, r.parameter_name, t.name as target_name, r.target_parameter_name, r.multiplier
+                from balance_parameter_references r join game_objects g on g.id = r.game_object_id
+                join game_objects t on t.id = r.target_game_object_id
+                """, rs -> {
+            references.computeIfAbsent(rs.getString("name"), key -> new TreeMap<>())
+                    .put(rs.getString("parameter_name"), new ReferenceTarget(rs.getString("target_name"),
+                            rs.getString("target_parameter_name"), rs.getDouble("multiplier")));
+        });
+        return new Snapshot(objects, magics, references);
     }
 }

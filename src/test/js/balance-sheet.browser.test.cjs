@@ -7,7 +7,7 @@ test('스프레드시트 필터, 재계산, 참조, 저장 실패 및 보기 복
     try {
         const page = await browser.newPage({viewport: {width: 1440, height: 960}});
         const errors = []; page.on('pageerror', e => errors.push(e.message));
-        const primary = {objects: {shooter: {values: {damage: 20, attack_interval: 2, hp: 100, quantity: 3, mana_cost: 5, zero: 0, unused: null}, tags: []}, bean_shooter: {values: {damage: 130, quantity: 1, mana_cost: 10, attack_interval: 2}, tags: ['unit']}, bean: {values: {speed: 7}, tags: []}}, magics: [{name: 'shooter', kind: 'Spawn', objectName: 'shooter'}]};
+        const primary = {objects: {shooter: {values: {damage: 20, attack_interval: 2, hp: 100, quantity: 3, mana_cost: 5, zero: 0, unused: null}, tags: []}, bean_shooter: {values: {damage: 130, quantity: 1, mana_cost: 10, attack_interval: 2}, tags: ['unit']}, bean: {values: {speed: 7}, tags: []}}, references: {bean_shooter: {projectile_speed: {objectName: 'bean', parameterName: 'speed', multiplier: 1}}}, magics: [{name: 'shooter', kind: 'Spawn', objectName: 'shooter'}]};
         const secondary = structuredClone(primary);
         secondary.objects.dev_only = {values: {damage: 40, attack_interval: 2, quantity: 2, hp: 80, mana_cost: 10}, tags: []};
         secondary.magics.push({name: 'dev_only', kind: 'Spawn', objectName: 'dev_only'});
@@ -33,7 +33,7 @@ test('스프레드시트 필터, 재계산, 참조, 저장 실패 및 보기 복
         await page.locator('#sheet-search').focus();
         assert.match(await page.locator('#sheet-change-count').innerText(), /1개/);
         await page.fill('#sheet-search', 'bean_shooter');
-        await page.locator('#balance-table button').filter({hasText: '← bean.speed'}).first().click();
+        await page.locator('#balance-table button').filter({hasText: 'bean.speed'}).first().click();
         assert.equal(await page.inputValue('#sheet-search'), 'bean');
         await page.fill('input[data-source="bean"][data-parameter="speed"][data-db="primary"]', '8');
         await page.locator('#sheet-search').focus();
@@ -62,7 +62,7 @@ test('스프레드시트 필터, 재계산, 참조, 저장 실패 및 보기 복
         await page.selectOption('#sheet-sort-db', 'secondary');
         assert.match(await page.locator('#balance-table tbody tr').first().innerText(), /bean_shooter/);
         await page.locator('#sheet-columns').evaluate(e => e.parentElement.open = true);
-        await page.locator('#sheet-columns label').filter({hasText: '공격'}).locator('input').uncheck();
+        await page.getByRole('checkbox', {name: '공격', exact: true}).uncheck();
         assert.doesNotMatch(await page.locator('#balance-table thead').innerText(), /공격 주기/);
         await page.fill('#sheet-search', 'shooter');
         await page.fill('input[data-source="shooter"][data-parameter="quantity"][data-db="secondary"]', '4');
