@@ -81,5 +81,3 @@ test('스프레드시트 필터, 재계산, 참조, 저장 실패 및 보기 복
         await page.screenshot({path: 'build/balance-sheet-preview.png', fullPage: true});
     } finally { await browser.close(); }
 });
-
-
