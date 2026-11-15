@@ -68,7 +68,7 @@ class AccountServerClientFallbackTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"jwt\":\"internal-token\"}", MediaType.APPLICATION_JSON));
 
-        String jwt = client.login("user", "password");
+        String jwt = client.login("user", "password").getJwt();
 
         assertEquals("internal-token", jwt);
         mockServer.verify();
@@ -92,12 +92,12 @@ class AccountServerClientFallbackTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"jwt\":\"public-token-2\"}", MediaType.APPLICATION_JSON));
 
-        String firstJwt = client.login("user", "password");
+        String firstJwt = client.login("user", "password").getJwt();
         assertEquals("public-token", firstJwt);
 
         // A second call must go straight to the public address: no further attempt at the
         // internal one, and no second fallback request either.
-        String secondJwt = client.login("user", "password");
+        String secondJwt = client.login("user", "password").getJwt();
         assertEquals("public-token-2", secondJwt);
 
         mockServer.verify();

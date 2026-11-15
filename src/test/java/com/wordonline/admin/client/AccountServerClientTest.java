@@ -42,6 +42,7 @@ class AccountServerClientTest {
                 "http://account-server:8080", ServerType.ACCOUNT, ServerState.ACTIVE, null, null, null);
         when(serverRepository.findAllByTypeAndState(ServerType.ACCOUNT, ServerState.ACTIVE))
                 .thenReturn(List.of(accountServer));
+        when(builder.clone()).thenReturn(builder);
         when(builder.baseUrl(anyString())).thenReturn(builder);
         when(builder.build()).thenReturn(restClient);
 
@@ -59,6 +60,7 @@ class AccountServerClientTest {
                 null, ServerType.ACCOUNT, ServerState.ACTIVE, null, null, null);
         when(serverRepository.findAllByTypeAndState(ServerType.ACCOUNT, ServerState.ACTIVE))
                 .thenReturn(List.of(accountServer));
+        when(builder.clone()).thenReturn(builder);
         when(builder.baseUrl(anyString())).thenReturn(builder);
         when(builder.build()).thenReturn(restClient);
 

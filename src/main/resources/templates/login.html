@@ -6,12 +6,13 @@
     <title>Login - Arcane Casters Admin</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" th:href="@{/images/favicon-32.png}">
-    <meta name="theme-color" content="#050404">
+    <meta name="theme-color" content="#0d2238">
     <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Jua&family=Lilita+One&display=swap" rel="stylesheet">
     <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet">
     <link th:href="@{/css/theevilent-theme.css}" rel="stylesheet">
+    <script th:src="@{/js/console-session.js}" defer></script>
 </head>
 <body>
     <div class="container mt-5">
@@ -26,7 +27,8 @@
                         <div th:if="${error}" class="alert alert-danger" role="alert">
                             <span th:text="${error}">Error message</span>
                         </div>
-                        <form th:action="@{/login}" method="post">
+                        <form th:action="@{/login}" method="post"
+                              th:attr="data-session-refresh=${restoreSession} ? @{/login/session/refresh} : null, data-session-home=@{/}">
                             <div class="mb-3">
                                 <label for="username" class="form-label">Username</label>
                                 <input type="text" class="form-control" id="username" name="username" required>
