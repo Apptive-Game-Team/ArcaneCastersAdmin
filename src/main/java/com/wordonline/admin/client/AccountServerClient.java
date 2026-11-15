@@ -6,17 +6,17 @@ import com.wordonline.admin.entity.server.Server;
 import com.wordonline.admin.entity.server.ServerState;
 import com.wordonline.admin.entity.server.ServerType;
 import com.wordonline.admin.repository.server.ServerRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
+import java.util.Map;
 import java.util.function.Function;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class AccountServerClient {
     private final RestClient.Builder builder;
     private final ServerRepository serverRepository;
@@ -24,6 +24,12 @@ public class AccountServerClient {
     private volatile RestClient restClient;
     private volatile String activeBaseUrl;
     private volatile String publicBaseUrl;
+
+    public AccountServerClient(@Qualifier("accountAuthRestClientBuilder") RestClient.Builder builder,
+                               ServerRepository serverRepository) {
+        this.builder = builder;
+        this.serverRepository = serverRepository;
+    }
 
     private synchronized void init() {
         if (restClient != null) {
@@ -37,7 +43,7 @@ public class AccountServerClient {
                 ));
         publicBaseUrl = accountServer.getUrl();
         activeBaseUrl = accountServer.getInterServerUrl();
-        restClient = builder.baseUrl(activeBaseUrl).build();
+        restClient = authClient(activeBaseUrl);
         log.info("Account server client initialized with URL: {}", activeBaseUrl);
     }
 
@@ -50,7 +56,7 @@ public class AccountServerClient {
         if (activeBaseUrl.equals(publicBaseUrl)) {
             return;
         }
-        restClient = builder.baseUrl(publicBaseUrl).build();
+        restClient = authClient(publicBaseUrl);
         activeBaseUrl = publicBaseUrl;
         log.info("Account server client switched to public URL: {}", publicBaseUrl);
     }
@@ -81,7 +87,11 @@ public class AccountServerClient {
         }
     }
 
-    public String login(String username, String password) {
+    private RestClient authClient(String baseUrl) {
+        return builder.clone().baseUrl(baseUrl).build();
+    }
+
+    public TokenResponseDto login(String username, String password) {
         LoginRequestDto loginRequest = new LoginRequestDto(username, password);
 
         try {
@@ -97,7 +107,7 @@ public class AccountServerClient {
             }
 
             log.info("Login successful for user: {}", username);
-            return response.getJwt();
+            return response;
         } catch (Exception e) {
             log.error("Login failed for user: {}", username, e);
             if (e instanceof IllegalStateException) {
@@ -105,5 +115,26 @@ public class AccountServerClient {
             }
             throw new RuntimeException("Login request to account server failed", e);
         }
+    }
+
+    public TokenResponseDto refresh(String refreshToken) {
+        if (restClient == null) {
+            init();
+        }
+        try {
+            return restClient.post().uri("/api/auth/refresh")
+                    .body(Map.of("refreshToken", refreshToken))
+                    .retrieve().body(TokenResponseDto.class);
+        } catch (ResourceAccessException e) {
+            // 요청이 이미 처리됐을 수 있으므로 같은 토큰으로 자동 재시도하지 않는다.
+            switchToPublicBaseUrl();
+            throw e;
+        }
+    }
+
+    public void logout(String refreshToken) {
+        callAccountServer(client -> client.post().uri("/api/auth/logout")
+                .body(Map.of("refreshToken", refreshToken))
+                .retrieve().toBodilessEntity());
     }
 }

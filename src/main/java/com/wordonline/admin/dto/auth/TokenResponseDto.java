@@ -9,4 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TokenResponseDto {
     private String jwt;
+    private String refreshToken;
+    private long expiresIn;
 }

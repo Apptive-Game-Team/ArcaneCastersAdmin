@@ -37,7 +37,8 @@ public class WebSecurityConfig {
                             authorizeRequests
                                     .requestMatchers(
                                             "/login",
-                                            "/logout",
+                                            "/login/session/refresh",
+                                            "/login/session/logout",
                                             "/css/**",
                                             "/js/**",
                                             "/images/**",
@@ -63,6 +64,7 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
